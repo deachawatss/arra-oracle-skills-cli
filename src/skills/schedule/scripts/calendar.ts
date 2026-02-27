@@ -2,9 +2,10 @@
 // calendar.ts - Show month calendar with annotations
 import { $ } from "bun";
 import { existsSync } from "fs";
+import { resolveSchedule } from "../../_shared/vault-paths";
 
-const ROOT = process.env.ROOT;
-const scheduleFile = ROOT ? `${ROOT}/ψ/inbox/schedule.md` : `${process.env.HOME}/.oracle/ψ/inbox/schedule.md`;
+const ROOT = process.env.ROOT || process.cwd();
+const scheduleFile = resolveSchedule(ROOT);
 
 const now = new Date();
 const todayNum = now.getDate();
