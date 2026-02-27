@@ -9,7 +9,8 @@ Query the Oracle schedule database via HTTP API. Backed by Drizzle DB with prope
 
 ## Usage
 
-- `/schedule` → Upcoming events (next 7 days)
+- `/schedule` → Upcoming events (next 30 days)
+- `/schedule week` → Next 7 days
 - `/schedule today` → Today's events
 - `/schedule tomorrow` → Tomorrow's events
 - `/schedule month` → This month
