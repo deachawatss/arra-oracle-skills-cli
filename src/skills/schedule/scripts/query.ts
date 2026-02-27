@@ -40,9 +40,12 @@ switch (filter.toLowerCase()) {
     params.set("status", "all");
     break;
   case "week":
+    params.set("from", todayStr());
+    params.set("to", addDays(todayStr(), 7));
+    break;
   case "upcoming":
     params.set("from", todayStr());
-    params.set("to", addDays(todayStr(), 14));
+    params.set("to", addDays(todayStr(), 30));
     break;
   case "month":
     {
@@ -111,6 +114,9 @@ try {
     const notes = ev.notes || "";
     console.log(`| ${ev.dateRaw || ev.date} | ${ev.time} | ${ev.event}${recur} | ${notes} | ${status} |`);
   }
+
+  // Show ground truth reference
+  console.log(`\n📄 \`~/.oracle/ψ/inbox/schedule.md\``);
 } catch (e: any) {
   if (e.code === "ConnectionRefused" || e.message?.includes("fetch")) {
     console.error("Cannot connect to Oracle API at " + API);
