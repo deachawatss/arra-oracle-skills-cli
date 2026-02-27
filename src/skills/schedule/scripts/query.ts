@@ -41,7 +41,7 @@ switch (filter.toLowerCase()) {
   case "week":
   case "upcoming":
     params.set("from", todayStr());
-    params.set("to", addDays(todayStr(), 7));
+    params.set("to", addDays(todayStr(), 14));
     break;
   case "month":
     {
