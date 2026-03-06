@@ -30,8 +30,8 @@ export const agents: Record<AgentType, AgentConfig> = {
   codex: {
     name: 'codex',
     displayName: 'Codex',
-    skillsDir: '.codex/skills',
-    globalSkillsDir: join(home, '.codex/skills'),
+    skillsDir: '.agents/skills',
+    globalSkillsDir: join(home, '.agents/skills'),
     detectInstalled: () => existsSync(join(home, '.codex')),
   },
   cursor: {
