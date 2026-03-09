@@ -12,6 +12,7 @@ Manage git worktrees for parallel agent work.
 ```
 /worktree              # List all worktrees
 /worktree new          # Create next agents/N
+/worktree new bitkub   # Create agents/N-bitkub (named)
 /worktree <N>          # Show path to agents/N
 /worktree remove <N>   # Remove agents/N worktree
 ```
@@ -25,7 +26,8 @@ ARGUMENTS: $ARGUMENTS
 ```
 
 - No args, `list`, or `status` → **List with Status**
-- `new` → **Create New**
+- `new` → **Create New** (unnamed)
+- `new <name>` → **Create New Named** (e.g., `new bitkub` → `agents/N-bitkub`)
 - Number (1, 2, 3...) → **Show Path**
 - `remove N` → **Remove**
 
@@ -52,29 +54,41 @@ Output is already clean and readable:
 
 ## Create New Agent Worktree
 
-When user says `/worktree new`:
+When user says `/worktree new` or `/worktree new <name>`:
 
-Worktrees are created as **siblings** (not nested) to avoid VS Code indexing issues:
+Worktrees are created as **siblings** (not nested) to avoid VS Code indexing issues.
+
+**Parse the optional name** from ARGUMENTS (everything after `new`):
 
 ```bash
 # Get repo name and parent dir
 REPO_NAME=$(basename $(pwd))
 PARENT_DIR=$(dirname $(pwd))
 
+# Parse name from arguments: "new bitkub" → NAME="bitkub", "new" → NAME=""
+NAME=""  # Set from ARGUMENTS if present (e.g., "new bitkub" → NAME="bitkub")
+
 # Find next available number
 NEXT=1
-while [ -d "$PARENT_DIR/$REPO_NAME.wt-$NEXT" ]; do
+while [ -d "$PARENT_DIR/$REPO_NAME.wt-$NEXT" ] || [ -d "$PARENT_DIR/$REPO_NAME.wt-$NEXT-"* ]; do
   NEXT=$((NEXT + 1))
 done
 
-WT_PATH="$PARENT_DIR/$REPO_NAME.wt-$NEXT"
+# Build path and branch with optional name suffix
+if [ -n "$NAME" ]; then
+  WT_PATH="$PARENT_DIR/$REPO_NAME.wt-$NEXT-$NAME"
+  BRANCH="agents/$NEXT-$NAME"
+else
+  WT_PATH="$PARENT_DIR/$REPO_NAME.wt-$NEXT"
+  BRANCH="agents/$NEXT"
+fi
 
 # Create worktree with new branch
-git worktree add "$WT_PATH" -b agents/$NEXT
+git worktree add "$WT_PATH" -b "$BRANCH"
 
 # Report
 echo "Created: $WT_PATH"
-echo "Branch: agents/$NEXT"
+echo "Branch: $BRANCH"
 ```
 
 **After creating, display prominently:**
@@ -82,13 +96,21 @@ echo "Branch: agents/$NEXT"
 ```
 Worktree Created
 
-  Path:   /path/to/repo.wt-1
-  Branch: agents/1
+  Path:   /path/to/repo.wt-1-bitkub
+  Branch: agents/1-bitkub
 
-Open in VS Code: code /path/to/repo.wt-1
+Open in VS Code: code /path/to/repo.wt-1-bitkub
 ```
 
-**Structure:**
+**Structure (named):**
+```
+parent/
+├── repo/                  # main (this workspace)
+├── repo.wt-1-bitkub/      # branch: agents/1-bitkub
+└── repo.wt-2-psru/        # branch: agents/2-psru
+```
+
+**Structure (unnamed):**
 ```
 parent/
 ├── repo/           # main (this workspace)
@@ -155,6 +177,7 @@ git branch -d agents/$N
 |---------|--------|
 | `/worktree` | List all worktrees |
 | `/worktree new` | Create `repo.wt-N` with branch `agents/N` |
+| `/worktree new bitkub` | Create `repo.wt-N-bitkub` with branch `agents/N-bitkub` |
 | `/worktree 1` | Show path to `repo.wt-1` |
 | `/worktree remove 2` | Remove `repo.wt-2` |
 

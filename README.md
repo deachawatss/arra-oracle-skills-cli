@@ -89,6 +89,22 @@ EOF
 
 Then restart Claude Code and run `/awaken` ([example](https://github.com/Soul-Brews-Studio/phukhao-oracle)).
 
+## Profiles
+
+Install a curated set of skills instead of all 30:
+
+```bash
+oracle-skills install -g -y --profile seed      # 6 essential skills
+oracle-skills install -g -y --profile standard   # 13 skills (daily workflow)
+oracle-skills install -g -y --profile full       # all 30 skills (default)
+```
+
+| Profile | Skills | Count |
+|---------|--------|-------|
+| **seed** / **minimal** | trace, dig, recap, learn, rrr, who-are-you | 6 |
+| **standard** | seed + worktree, oracle, standup, forward, fyi, merged, talk-to | 13 |
+| **full** | All skills | 30 |
+
 ## Skills
 
 Oracle skills extend your agent's capabilities with specialized workflows:
@@ -128,7 +144,7 @@ Oracle skills extend your agent's capabilities with specialized workflows:
 | 29 | **who-are-you** | skill | Know ourselves |
 | 30 | **worktree** | skill | Git worktree for parallel work |
 
-*Generated: 2026-03-07 18:33:02 UTC*
+*Generated: 2026-03-09 06:58:57 UTC*
 
 ## Supported Agents
 
