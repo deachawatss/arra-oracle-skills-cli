@@ -12,10 +12,10 @@ const ALL_SKILLS = [
 ];
 
 describe("profiles", () => {
-  it("minimal has 7 skills (4 ritual + go + about-oracle + oracle-family-scan)", () => {
+  it("minimal has 8 skills (4 ritual + go + about-oracle + oracle-family-scan + oracle-soul-sync-update)", () => {
     const result = resolveProfile("minimal", ALL_SKILLS);
-    expect(result).toEqual(['forward', 'rrr', 'recap', 'standup', 'go', 'about-oracle', 'oracle-family-scan']);
-    expect(result?.length).toBe(7);
+    expect(result).toEqual(['forward', 'rrr', 'recap', 'standup', 'go', 'about-oracle', 'oracle-family-scan', 'oracle-soul-sync-update']);
+    expect(result?.length).toBe(8);
   });
 
   it("seed is alias for minimal", () => {
@@ -24,14 +24,15 @@ describe("profiles", () => {
     expect(seed).toEqual(minimal);
   });
 
-  it("standard has 11 skills (minimal + discovery)", () => {
+  it("standard has 12 skills (minimal + discovery)", () => {
     const result = resolveProfile("standard", ALL_SKILLS);
-    expect(result?.length).toBe(11);
+    expect(result?.length).toBe(12);
     // includes minimal
     expect(result).toContain('forward');
     expect(result).toContain('rrr');
     expect(result).toContain('recap');
     expect(result).toContain('standup');
+    expect(result).toContain('oracle-soul-sync-update');
     // includes discovery
     expect(result).toContain('trace');
     expect(result).toContain('dig');
@@ -85,30 +86,27 @@ describe("features", () => {
 });
 
 describe("resolveProfileWithFeatures", () => {
-  it("minimal + soul = 12 skills", () => {
+  it("minimal + soul = 13 skills", () => {
     const result = resolveProfileWithFeatures("minimal", ["soul"], ALL_SKILLS);
-    // 7 minimal + 6 soul - 1 overlap (about-oracle) = 12
-    expect(result.length).toBe(12);
-    // has minimal
+    // 8 minimal + 6 soul - 1 overlap (about-oracle) = 13
+    expect(result.length).toBe(13);
     expect(result).toContain('forward');
     expect(result).toContain('standup');
-    // has soul
     expect(result).toContain('awaken');
     expect(result).toContain('philosophy');
   });
 
-  it("standard + network deduplicates talk-to and oracle-family-scan", () => {
+  it("standard + network deduplicates talk-to, oracle-family-scan, oracle-soul-sync-update", () => {
     const result = resolveProfileWithFeatures("standard", ["network"], ALL_SKILLS);
-    // standard(11) + network(5) - 2 overlap (talk-to, oracle-family-scan) = 14
+    // standard(12) + network(5) - 3 overlap (talk-to, oracle-family-scan, oracle-soul-sync-update) = 14
     expect(result.length).toBe(14);
-    // no duplicates
     const unique = new Set(result);
     expect(unique.size).toBe(result.length);
   });
 
-  it("minimal + creator = 11 skills", () => {
+  it("minimal + creator = 12 skills", () => {
     const result = resolveProfileWithFeatures("minimal", ["creator"], ALL_SKILLS);
-    expect(result.length).toBe(11);
+    expect(result.length).toBe(12);
     expect(result).toContain('speak');
     expect(result).toContain('gemini');
   });
@@ -120,14 +118,14 @@ describe("resolveProfileWithFeatures", () => {
 
   it("multiple features stack", () => {
     const result = resolveProfileWithFeatures("minimal", ["soul", "creator"], ALL_SKILLS);
-    // 7 + 6 + 4 - 1 (about-oracle overlap) = 16
-    expect(result.length).toBe(16);
+    // 8 + 6 + 4 - 1 (about-oracle overlap) = 17
+    expect(result.length).toBe(17);
     expect(result).toContain('awaken');
     expect(result).toContain('speak');
   });
 
   it("empty features = just profile", () => {
     const result = resolveProfileWithFeatures("minimal", [], ALL_SKILLS);
-    expect(result.length).toBe(7);
+    expect(result.length).toBe(8);
   });
 });

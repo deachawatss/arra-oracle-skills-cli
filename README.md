@@ -28,8 +28,8 @@ oracle-skills uninstall -g -s dig   # remove specific skill
 
 | Profile | Count | Skills |
 |---------|-------|--------|
-| **minimal** | 7 | `forward`, `rrr`, `recap`, `standup`, `go`, `about-oracle`, `oracle-family-scan` |
-| **standard** | 11 | `forward`, `rrr`, `recap`, `standup`, `trace`, `dig`, `learn`, `talk-to`, `oracle-family-scan`, `go`, `about-oracle` |
+| **minimal** | 8 | `forward`, `rrr`, `recap`, `standup`, `go`, `about-oracle`, `oracle-family-scan`, `oracle-soul-sync-update` |
+| **standard** | 12 | `forward`, `rrr`, `recap`, `standup`, `trace`, `dig`, `learn`, `talk-to`, `oracle-family-scan`, `go`, `about-oracle`, `oracle-soul-sync-update` |
 | **full** | 28 | all |
 
 Switch anytime: `/go minimal`, `/go standard`, `/go full`, `/go + soul`
@@ -82,7 +82,7 @@ Oracle skills extend your agent's capabilities with specialized workflows:
 | 27 | **who-are-you** | skill | Know ourselves |
 | 28 | **worktree** | skill | Git worktree for parallel work |
 
-*Generated: 2026-03-13 06:44:41 UTC*
+*Generated: 2026-03-13 10:52:26 UTC*
 
 ## Supported Agents
 

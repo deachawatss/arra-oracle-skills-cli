@@ -15,17 +15,17 @@ export const profiles: Record<string, { include?: string[]; exclude?: string[] }
   // minimal: the daily ritual — standup → recap → work → rrr → forward
   // go is always included so users can switch profiles
   seed: {
-    include: ['forward', 'rrr', 'recap', 'standup', 'go', 'about-oracle', 'oracle-family-scan'],
+    include: ['forward', 'rrr', 'recap', 'standup', 'go', 'about-oracle', 'oracle-family-scan', 'oracle-soul-sync-update'],
   },
   minimal: {
-    include: ['forward', 'rrr', 'recap', 'standup', 'go', 'about-oracle', 'oracle-family-scan'],
+    include: ['forward', 'rrr', 'recap', 'standup', 'go', 'about-oracle', 'oracle-family-scan', 'oracle-soul-sync-update'],
   },
   // standard: daily driver + discovery (covers 96% of actual usage)
   standard: {
     include: [
       'forward', 'rrr', 'recap', 'standup',
       'trace', 'dig', 'learn', 'talk-to', 'oracle-family-scan',
-      'go', 'about-oracle',
+      'go', 'about-oracle', 'oracle-soul-sync-update',
     ],
   },
   // full: everything
