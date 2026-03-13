@@ -35,13 +35,18 @@ async function compile() {
         // Extract description
         const descMatch = frontmatter.match(/description:\s*(.+)$/m);
         const rawDescription = descMatch ? descMatch[1].trim() : `${skillName} skill`;
-        
+
+        // Extract argument-hint (optional)
+        const hintMatch = frontmatter.match(/argument-hint:\s*"(.+)"$/m);
+        const argumentHint = hintMatch ? hintMatch[1] : null;
+
         // Inject version
         const description = `v${pkg.version} | ${rawDescription}`;
-        
+
         // Create stub command that tells agent to execute skill with args
+        const hintLine = argumentHint ? `\nargument-hint: "${argumentHint}"` : '';
         const commandContent = `---
-description: ${description}
+description: ${description}${hintLine}
 ---
 
 # /${skillName}

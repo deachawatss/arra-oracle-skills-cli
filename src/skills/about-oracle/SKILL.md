@@ -1,6 +1,7 @@
 ---
 name: about-oracle
 description: What is Oracle — told by the AI itself. Use when someone asks "what is oracle", "about oracle", "tell me about this project", or wants the origin story.
+argument-hint: "--short | --stats | --family | --th | --en/th"
 ---
 
 # /about-oracle

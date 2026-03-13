@@ -1,6 +1,7 @@
 ---
 name: deep-research
 description: Deep Research via Gemini. Use when user says "deep research", "research this topic", or needs comprehensive analysis with sources.
+argument-hint: "<topic>"
 alias: /gemini research
 ---
 

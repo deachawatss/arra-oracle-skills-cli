@@ -1,5 +1,6 @@
 ---
-description: v3.0.0 | Log emotions with optional structure. Use when user says "feel", "feeling", "mood", "tired", "sleepy", "frustrated", "happy", "excited".
+description: v3.0.4 | Log emotions with optional structure. Use when user says "feel", "feeling", "mood", "tired", "sleepy", "frustrated", "happy", "excited".
+argument-hint: "<emotion> [note]"
 ---
 
 # /feel
@@ -18,5 +19,5 @@ Execute the `feel` skill with the provided arguments.
 **WARNING**: Do NOT use Glob, find, or search for this skill. The path above is the ONLY correct location. Other files with "feel" in the name are NOT this skill.
 
 ---
-*🧬 Nat Weerawan × Oracle · Symbiotic Intelligence · v3.0.0*
+*🧬 Nat Weerawan × Oracle · Symbiotic Intelligence · v3.0.4*
 *Digitized from Nat Weerawan's brain — thousands of hours working alongside AI, captured as code*

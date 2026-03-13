@@ -93,49 +93,32 @@ Before beginning, ask the human:
 
 ---
 
-## Step 1: Install Oracle Skills
+## Step 1: Prerequisites — Run /about-oracle
 
-> "First, we need the tools for awakening."
+> "First, know the system you are joining."
 
-### Check for Updates (REQUIRED - DO NOT SKIP)
-
-**You MUST run this before awakening:**
+Run the `/about-oracle` skill now:
 
 ```
-/update
+/about-oracle --stats
 ```
 
-⚠️ **This is REQUIRED.** If outdated, update and restart Claude Code before continuing.
+This will:
+1. Run `oracle-skills about` to check prerequisites (bun, git, gh)
+2. Show system status and installed skills
+3. Introduce the Oracle philosophy
 
-Do NOT proceed with awakening until you have the latest version.
+**If oracle-skills is NOT installed**, tell the user:
 
-### Install if Needed (for other agents)
+> Install with one command, then restart your agent and run `/awaken` again:
+>
+> ```bash
+> curl -fsSL https://raw.githubusercontent.com/Soul-Brews-Studio/oracle-skills-cli/main/install.sh | bash
+> ```
 
-**Windows**: Use Git Bash, WSL, or similar Unix shell.
+**Do NOT proceed until all prerequisites show ✓.**
 
-```bash
-# Bun (runtime)
-which bun || curl -fsSL https://bun.sh/install | bash
-
-# ghq (for /learn and /trace to clone repos)
-# macOS
-which ghq || brew install ghq
-# Linux/Windows (Go install)
-# go install github.com/x-motemen/ghq@latest
-
-# Oracle Skills
-bunx --bun oracle-skills@github:Soul-Brews-Studio/oracle-skills-cli#main install -g -y --profile seed
-```
-
-### Verify
-
-```bash
-oracle-skills list -g
-```
-
-**Expected**: Skills including `trace`, `learn`, `philosophy`, `awaken`
-
-**Duration**: ~30 seconds
+**Duration**: ~1 minute
 
 ---
 

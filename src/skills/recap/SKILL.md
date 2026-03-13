@@ -1,6 +1,7 @@
 ---
 name: recap
 description: Session orientation and awareness. Use when starting a session, after /jump, lost your place, switching context, or when user asks "now", "where are we", "what are we doing", "status".
+argument-hint: "[--now | --deep]"
 trigger: /recap
 ---
 

@@ -1,6 +1,7 @@
 ---
 name: trace
 description: Find projects across git history, repos, docs, and Oracle. Use when user asks "trace", "find project", "where is [project]", "search history". Supports --oracle (fast), --smart (default), --deep (5 subagents). For session mining use /dig.
+argument-hint: "<query> [--oracle | --smart | --deep]"
 ---
 
 # /trace - Unified Discovery System

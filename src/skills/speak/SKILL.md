@@ -1,6 +1,7 @@
 ---
 name: speak
 description: Text-to-speech using edge-tts or macOS say. Use when user says "speak", "say", "read aloud", or wants text spoken.
+argument-hint: "<text>"
 ---
 
 # /speak - Text-to-Speech

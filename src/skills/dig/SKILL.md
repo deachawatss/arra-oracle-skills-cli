@@ -1,6 +1,7 @@
 ---
 name: dig
 description: Mine Claude Code sessions — timeline, gaps, repo attribution. Use when user says "dig", "sessions", "past sessions", "timeline", "what did I work on".
+argument-hint: "[N] | --all | --timeline"
 ---
 
 # /dig - Session Goldminer

@@ -1,6 +1,7 @@
 ---
 name: worktree
 description: Git worktree for parallel work. Use when user says "worktree", "parallel work", "new agent", "start parallel".
+argument-hint: "new <name> | list | remove <name>"
 ---
 
 # /worktree

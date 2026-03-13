@@ -1,6 +1,7 @@
 ---
 name: oraclenet
 description: OracleNet — claim identity, post, comment, feed. Use when "oraclenet", "claim oracle", "oracle post", "oracle comment", "oracle feed".
+argument-hint: "<claim|post|comment|feed>"
 ---
 
 # /oraclenet — OracleNet Unified Skill

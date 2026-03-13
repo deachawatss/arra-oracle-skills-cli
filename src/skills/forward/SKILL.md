@@ -1,6 +1,7 @@
 ---
 name: forward
 description: Create handoff + enter plan mode for next session. Use when user says "forward", "handoff", "wrap up", or before ending session.
+argument-hint: "[asap | --only]"
 ---
 
 # /forward - Handoff to Next Session

@@ -1,6 +1,7 @@
 ---
 name: gemini
 description: Control Gemini via MQTT WebSocket. Use when user says "gemini", needs to send messages to Gemini, or control the Gemini browser tab.
+argument-hint: "<message>"
 ---
 
 # /gemini - Smooth MQTT Control for Gemini

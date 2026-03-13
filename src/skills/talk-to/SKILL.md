@@ -1,6 +1,7 @@
 ---
 name: talk-to
 description: Talk to an agent via Oracle threads. Use when user says "talk to", "message", "chat with", or wants to communicate with another agent.
+argument-hint: "<agent-name> [message]"
 ---
 
 # /talk-to - Agent Messaging

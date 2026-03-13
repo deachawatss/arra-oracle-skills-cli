@@ -1,6 +1,7 @@
 ---
 name: oracle
 description: Manage Oracle skills — profiles, features, enable/disable. Use when user says "oracle", "profile", "install skill", "remove skill", "switch profile", "enable", "disable".
+argument-hint: "<profiles|install|uninstall|list>"
 ---
 
 # /oracle

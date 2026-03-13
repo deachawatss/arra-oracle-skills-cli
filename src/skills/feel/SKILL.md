@@ -1,6 +1,7 @@
 ---
 name: feel
 description: Log emotions with optional structure. Use when user says "feel", "feeling", "mood", "tired", "sleepy", "frustrated", "happy", "excited".
+argument-hint: "<emotion> [note]"
 ---
 
 # /feel - Smart Emotion Log

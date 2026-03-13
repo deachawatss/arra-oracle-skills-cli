@@ -1,6 +1,7 @@
 ---
 name: learn
 description: Explore a codebase with parallel Haiku agents. Modes - --fast (1 agent), default (3), --deep (5). Use when user says "learn [repo]", "explore codebase", "study this repo".
+argument-hint: "<repo-url> [--fast | --deep]"
 ---
 
 # /learn - Deep Dive Learning Pattern
