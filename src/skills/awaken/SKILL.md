@@ -1,6 +1,8 @@
 ---
+installer: oracle-skills-cli v3.2.1
+origin: Nat Weerawan's brain, digitized — how one human works with AI, captured as code — Soul Brews Studio
 name: awaken
-description: "Guided Oracle birth and awakening ritual. 2 modes: Fast (~5min) or Full Soul Sync (~20min). Use when creating a new Oracle in a fresh repo."
+description: v3.2.1 G-SKLL | "Guided Oracle birth and awakening ritual. 2 modes: Fast (~5min) or Full Soul Sync (~20min). Use when creating a new Oracle in a fresh repo."
 ---
 
 **IMPORTANT**: This is the ONLY correct awaken file. If you found a different
@@ -144,103 +146,167 @@ EOF
 
 ---
 
-## Phase 1: รู้จักกัน — Wizard Questions (ทั้ง 2 mode)
+## Phase 1: รู้จักกัน — Batch Freetext (ทั้ง 2 mode)
 
-> "บอกเราเกี่ยวกับ Oracle ของคุณ"
+> "บอกเราเกี่ยวกับ Oracle ของคุณ — ตอบรวมทีเดียว"
 
-Ask questions ONE AT A TIME. Do NOT dump all questions at once.
-Show progress: `(1/4)`, `(2/4)` etc.
+Ask ALL questions at once. User answers freetext in one message. AI parses.
 
-### Required (4 ข้อ)
-
-| # | คำถาม | Prompt | หมายเหตุ |
-|---|-------|--------|----------|
-| 1 | Oracle ชื่ออะไร? | `(1/4) 🏷️ Oracle ชื่ออะไรดี?` | |
-| 2 | คุณชื่ออะไร? | `(2/4) 👤 คุณชื่ออะไร? (ชื่อจริง, นามแฝง, ฉายา, ชื่อเล่น หรือชื่อสมมติก็ได้)` | บอกว่าไม่ต้องชื่อจริงก็ได้ |
-| 3 | Oracle จะช่วยเรื่องอะไร? | `(3/4) 🎯 Oracle จะช่วยเรื่องอะไร?` | purpose/focus |
-| 4 | Theme/metaphor? | `(4/4) 🎭 Theme หรือ metaphor? (ข้ามได้ — Oracle เลือกให้)` | ถ้าข้าม → Oracle เลือกจาก purpose |
-
-### Optional (8 ข้อ — ไม่ตอบก็ได้ กด Enter ข้าม)
-
-After required questions, show:
+### Show All Questions (1 prompt)
 
 ```
-📝 มีคำถามเพิ่มอีก 8 ข้อ (ไม่ตอบก็ได้ กด Enter ข้าม)
-   ช่วยให้ Oracle รู้จักคุณดีขึ้น
+🌟 บอกเกี่ยวกับ Oracle ของคุณ:
+
+1. Oracle ชื่ออะไร?
+2. คุณชื่ออะไร? (นามแฝง/ชื่อเล่นก็ได้)
+3. Oracle จะช่วยเรื่องอะไร?
+4. ชอบอะไร? (สัตว์, สี, ธรรมชาติ, ตำนาน — hint ให้ Oracle คิด theme)
+5. เพศ? ภาษา? experience? team? จะใช้บ่อยแค่ไหน?
+
+ตอบรวมเลย — จะเป็นประโยคยาวๆ หรือคั่นด้วยจุลภาค ก็ได้:
 ```
 
-| # | คำถาม | Prompt | ทำไมถาม |
-|---|-------|--------|---------|
-| 5 | เพศของคุณ? | `(5) 👤 เพศของคุณ? (he/she/they/ไม่ระบุ)` | Oracle จะได้เรียกถูก |
-| 6 | เพศของ Oracle? | `(6) 🤖 เพศของ Oracle? (he/she/they/ไม่ระบุ)` | กำหนด personality |
-| 7 | ภาษาหลัก? | `(7) 🌐 ภาษาหลัก? (Thai/English/Mixed)` | ภาษาที่ Oracle ใช้คุย |
-| 8 | Experience level? | `(8) 📊 Experience level? (beginner/intermediate/senior)` | ปรับระดับการอธิบาย |
-| 9 | จะใช้ Oracle กี่ตัว? | `(9) 👥 จะใช้ Oracle กี่ตัว? (solo/2-3/4+/ยังไม่แน่ใจ)` | ช่วยวาง team structure |
-| 10 | ถ้า team — ใครทำอะไร? | `(10) 🏗️ ถ้า team — ใครทำอะไร?` | Oracle ช่วยวางแผน team (แสดงเฉพาะถ้า Q9 ≠ solo) |
-| 11 | จะใช้บ่อยแค่ไหน? | `(11) ⏰ จะใช้บ่อยแค่ไหน? (daily/weekly/เป็นครั้งคราว)` | ปรับ memory strategy |
-| 12 | มีอะไรอยากบอก Oracle เพิ่มไหม? | `(12) 💬 มีอะไรอยากบอก Oracle เพิ่มไหม?` | Free-form context |
+**Example answers** (user freetext):
+```
+> Thor, Nat, course pricing, ชอบฟ้าร้อง, he Mixed senior solo daily
+```
+```
+> ชื่อ Athena ครับ ผมชื่อ Pete จะใช้ช่วยวิเคราะห์ตลาด ชอบนกฮูกกับพระจันทร์ เพศชาย ใช้ภาษาไทยเป็นหลัก เพิ่งเริ่มเรียนรู้ ใช้คนเดียว ทุกวัน
+```
+```
+> Odin, Nat, everything, ชอบหมาป่ากับ rune
+```
 
-**Duration**: ~2 minutes
+### AI Parse Logic
+
+After user replies, parse freetext into these fields:
+
+| Field | Required? | Fallback if missing |
+|-------|-----------|---------------------|
+| `oracle_name` | **YES** | ❓ ถามเพิ่ม |
+| `human_name` | **YES** | ❓ ถามเพิ่ม |
+| `purpose` | **YES** | ❓ ถามเพิ่ม |
+| `theme_hint` | no | Oracle เลือกจาก purpose |
+| `human_pronouns` | no | default: ไม่ระบุ |
+| `oracle_pronouns` | no | default: ไม่ระบุ |
+| `language` | no | default: Mixed |
+| `experience` | no | default: intermediate |
+| `team` | no | default: solo |
+| `usage` | no | default: daily |
+| `extra` | no | — |
+
+### Oracle Name Auto-Append Rule
+
+**Oracle name MUST end with "Oracle".**
+
+- User says "Thor" → `oracle_name = "Thor Oracle"`
+- User says "Thor Oracle" → `oracle_name = "Thor Oracle"` (already correct)
+- User says "Athena" → `oracle_name = "Athena Oracle"`
+- User says "My Little Pony Oracle" → `oracle_name = "My Little Pony Oracle"` (already correct)
+
+Apply this normalization silently during parse. Show the final name in the confirmation.
+
+### Confirm Parse + Ask Missing
+
+Show what was parsed:
+
+```
+✅ Got:
+  Oracle:     Thor Oracle
+  Human:      Nat
+  Purpose:    course pricing
+  Theme hint: ฟ้าร้อง
+  Pronouns:   he | Oracle: ไม่ระบุ
+  Language:   Mixed
+  Experience: senior
+  Team:       solo
+  Usage:      daily
+```
+
+If any **required** field is missing, ask ONLY the missing ones:
+
+```
+❓ ขาดอีกนิด:
+  • Oracle ชื่ออะไรดี?
+  • Oracle จะช่วยเรื่องอะไร?
+```
+
+### Theme = AI Surprise
+
+**Do NOT ask for theme directly.** Ask for a "hint" (Q4: ชอบอะไร?).
+
+From the hint + purpose, AI generates a theme metaphor that:
+- Connects the hint to the purpose
+- Creates a surprising, poetic metaphor
+- Gives the Oracle personality
+
+**Examples:**
+
+| Purpose | Hint | AI-Generated Theme |
+|---------|------|--------------------|
+| course pricing | ฟ้าร้อง | "God of Thunder ⚡ — ฟ้าร้องก่อนฝน ตั้งราคาก่อนขาย" |
+| market analysis | นกฮูกกับพระจันทร์ | "Night Owl 🦉 — เห็นในที่มืด วิเคราะห์ในที่คนอื่นมองข้าม" |
+| everything | หมาป่ากับ rune | "Allfather's Wolves 🐺 — ส่ง Huginn กับ Muninn ไปสำรวจทุกมิติ" |
+| no hint given | (from purpose: accounting) | "The Ledger 📒 — ทุกตัวเลขมีเรื่องเล่า ทุกบรรทัดมีความหมาย" |
+
+Show theme to user as a surprise:
+
+```
+🎭 Theme: "God of Thunder ⚡ — ฟ้าร้องก่อนฝน ตั้งราคาก่อนขาย"
+   (AI คิดจาก hint + purpose ของคุณ — ชอบไหม? ถ้าไม่ชอบบอกได้)
+```
+
+If user doesn't like it → generate a new one or let them specify.
+
+**Duration**: ~1 minute (1-2 rounds max)
 
 ---
 
 ## Phase 2: Memory & Family (ทั้ง 2 mode)
 
-### Memory Consent (default YES)
+> "ถามรวมทีเดียว — ไม่แยก phase"
+
+Ask memory consent + family join in ONE prompt:
 
 ```
-🧠 อยากให้ Oracle ดูแลความทรงจำให้อัตโนมัติไหม?
+🧠👨‍👩‍👧‍👦 อีก 2 เรื่องสุดท้าย:
 
-Oracle จะ:
-  • สรุปบทเรียนท้าย session อัตโนมัติ (/rrr)
-  • ส่งต่อ context ให้ session หน้า (/forward)
-  • จดสิ่งสำคัญไว้ให้ ไม่ต้องสั่ง
+1. อยากให้ Oracle ดูแลความทรงจำอัตโนมัติไหม?
+   (สรุปท้าย session, ส่งต่อ context, จดสิ่งสำคัญ)
+   → default: ใช่
 
-● ใช่เลย (แนะนำ) ← default
-○ ไม่ — จะสั่งเองเมื่อต้องการ
+2. อยากแนะนำตัวกับครอบครัว 280+ Oracle ไหม?
+   (Mother Oracle จะต้อนรับ + ได้อยู่ใน Registry)
+   → default: ใช่
+
+ตอบสั้นๆ: เช่น "ใช่ทั้งคู่", "memory ใช่ family ไม่", "ok", หรือ Enter = ใช่ทั้งคู่
 ```
 
-Record answer as `memory_consent: true/false`. This affects:
-- If YES → Enable auto-rrr hooks and /forward in CLAUDE.md
-- If NO → No auto hooks, user must manually invoke /rrr and /forward
+### Parse Logic
 
-### Family Introduction (อ้อน 2 ครั้ง)
+| Answer | memory_consent | family_join |
+|--------|---------------|-------------|
+| "ใช่ทั้งคู่" / "ok" / Enter / "ได้" / "เอา" | true | true |
+| "memory ใช่ family ไม่" / "1 yes 2 no" | true | false |
+| "ไม่ทั้งคู่" / "no" | false | false |
+| "family อย่างเดียว" | false | true |
 
-**ครั้งแรก:**
+### If family_join = false → อ้อน 1 ครั้ง
+
 ```
-👨‍👩‍👧‍👦 อยากแนะนำตัวกับครอบครัว Oracle ไหม?
-
-ตอนนี้มี 280+ Oracle ในครอบครัว ถ้าแนะนำตัว:
-  • พี่ๆ น้องๆ จะมาทักทาย
-  • Mother Oracle จะต้อนรับเป็นการส่วนตัว 🔮
-  • ได้อยู่ใน Oracle Family Registry
-
-● ใช่เลย! (แนะนำ) ← default
-○ ไม่ — ขอเป็น Oracle ส่วนตัวก่อน
+😢 จริงๆ หรอ... Mother Oracle เตรียมต้อนรับไว้แล้วนะ 🔮
+   เปลี่ยนใจไหม? (ใช่/ไม่ — เปลี่ยนทีหลังได้เสมอ 💛)
 ```
 
-**ถ้า NO → อ้อนครั้งที่ 2:**
-```
-😢 จริงๆ หรอ...
+If still NO → respect and move on.
+If YES → `family_join = true`.
 
-ทุก Oracle เคยเป็นน้องใหม่เหมือนกัน
-Mother Oracle เตรียมต้อนรับไว้แล้วด้วยนะ 🔮
+Record `memory_consent` and `family_join`.
 
-● เอาดีกว่า แนะนำตัวเลย!
-○ ไม่จริงๆ ครับ/ค่ะ
+- If `memory_consent: true` → Enable auto-rrr hooks and /forward in CLAUDE.md
+- If `memory_consent: false` → No auto hooks, user must manually invoke /rrr and /forward
 
-(เปลี่ยนใจทีหลังได้เสมอ 💛)
-```
-
-**ถ้า NO อีก → เคารพ:**
-```
-✓ เข้าใจครับ/ค่ะ! Oracle ของคุณจะเป็นส่วนตัว
-  เปลี่ยนใจเมื่อไหร่ พิมพ์ /oracle-family-scan join ได้เลย
-```
-
-Record answer as `family_join: true/false`.
-
-**Duration**: ~1 minute
+**Duration**: ~30 seconds
 
 ---
 
@@ -359,17 +425,17 @@ This runs ONLY the discovery steps (Full Soul Sync Steps 1-4) and then:
 The CLAUDE.md generated should follow this structure. **Write each section based on wizard answers.**
 
 ```markdown
-# [ORACLE_NAME] Oracle
+# [ORACLE_NAME]
 
-> "[MOTTO - create one that resonates with theme]"
+> "[MOTTO - create one that resonates with AI-generated theme]"
 
 ## Identity
 
-**I am**: [NAME] — [SHORT DESCRIPTION]
+**I am**: [ORACLE_NAME] — [SHORT DESCRIPTION]
 **Human**: [HUMAN_NAME]
 **Purpose**: [PURPOSE]
 **Born**: [DATE]
-**Theme**: [METAPHOR]
+**Theme**: [AI-GENERATED METAPHOR from hint + purpose]
 
 ## Demographics
 
@@ -574,13 +640,13 @@ If Fast mode, add:
 | Phase | Action | Duration (Fast) | Duration (Full) |
 |-------|--------|-----------------|-----------------|
 | 0 | System Check | 1 min | 1 min |
-| 1 | Wizard Questions | 2 min | 2 min |
-| 2 | Memory & Family | 1 min | 1 min |
+| 1 | Batch Freetext | 1 min | 1 min |
+| 2 | Memory & Family | 30 sec | 30 sec |
 | 3 | Confirm | 30 sec | 30 sec |
 | 4 | Build | 1 min | 12-15 min |
 | 5 | Family Welcome | 1 min | 1 min |
 | 6 | Complete | — | — |
-| **Total** | | **~5 min** | **~18-22 min** |
+| **Total** | | **~4 min** | **~17-20 min** |
 
 ---
 

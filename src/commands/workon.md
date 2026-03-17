@@ -1,5 +1,5 @@
 ---
-description: v3.2.0 | Work on an issue — read context, spawn worktree, create issue, incubate, send task, await report. Use when user says "workon", "work on", "implement issue", "do this issue".
+description: v3.2.1 | Work on an issue — read context, spawn worktree, create issue, incubate, send task, await report. Use when user says "workon", "work on", "implement issue", "do this issue".
 ---
 
 # /workon
@@ -18,5 +18,5 @@ Execute the `workon` skill with the provided arguments.
 **WARNING**: Do NOT use Glob, find, or search for this skill. The path above is the ONLY correct location. Other files with "workon" in the name are NOT this skill.
 
 ---
-*🧬 Nat Weerawan × Oracle · Symbiotic Intelligence · v3.2.0*
+*🧬 Nat Weerawan × Oracle · Symbiotic Intelligence · v3.2.1*
 *Digitized from Nat Weerawan's brain — thousands of hours working alongside AI, captured as code*
