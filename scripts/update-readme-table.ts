@@ -49,18 +49,18 @@ async function updateReadmeTable() {
   let readme = await readFile(README_PATH, 'utf-8');
 
   // --- Update skills table ---
-  const tableStart = readme.indexOf('specialized workflows:');
-  const tableEnd = readme.indexOf('\n## Supported Agents');
+  const skillsStart = readme.indexOf('<!-- skills:start -->');
+  const skillsEnd = readme.indexOf('<!-- skills:end -->');
 
-  if (tableStart === -1 || tableEnd === -1) {
+  if (skillsStart === -1 || skillsEnd === -1) {
     console.log('Could not find skills table markers in README');
     process.exit(1);
   }
 
-  const before = readme.substring(0, tableStart + 'specialized workflows:'.length);
-  const after = readme.substring(tableEnd);
+  const before = readme.substring(0, skillsStart + '<!-- skills:start -->'.length);
+  const after = readme.substring(skillsEnd);
 
-  readme = `${before}\n\n${table}\n\n*Generated: ${timestamp}*\n${after}`;
+  readme = `${before}\n\n${table}\n\n${after}`;
 
   // --- Count total skills for profile table ---
   const skillCount = (table.match(/^\| \d+/gm) || []).length;
@@ -82,8 +82,8 @@ async function updateReadmeTable() {
 
   // --- Update header skill count ---
   readme = readme.replace(
-    /Skills for AI coding agents\. \d+ skills/,
-    `Skills for AI coding agents. ${skillCount} skills`
+    /\d+ skills for AI coding agents/,
+    `${skillCount} skills for AI coding agents`
   );
 
   // Check if changed

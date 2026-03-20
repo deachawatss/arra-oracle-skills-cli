@@ -1,9 +1,6 @@
 # oracle-skills
 
-[![CI](https://github.com/Soul-Brews-Studio/oracle-skills-cli/actions/workflows/ci.yml/badge.svg)](https://github.com/Soul-Brews-Studio/oracle-skills-cli/actions/workflows/ci.yml)
-[![Version](https://img.shields.io/github/v/tag/Soul-Brews-Studio/oracle-skills-cli?label=version)](https://github.com/Soul-Brews-Studio/oracle-skills-cli/releases)
-
-Skills for AI coding agents. 31 skills, 18 agents, 4 profiles.
+31 skills for AI coding agents. 18 agents supported. Install once, use everywhere.
 
 ## Install
 
@@ -11,18 +8,17 @@ Skills for AI coding agents. 31 skills, 18 agents, 4 profiles.
 bunx --bun oracle-skills@github:Soul-Brews-Studio/oracle-skills-cli install -g -y
 ```
 
-Restart your agent. Try `/about-oracle`.
-
 ## Profiles
 
-```bash
-oracle-skills init                  # standard (11 skills, default)
-oracle-skills init -p minimal       # minimal (7 skills)
-oracle-skills install -g -y         # full (all skills)
-oracle-skills select -g             # interactive — pick exactly what you want
-oracle-skills uninstall -g -y       # remove all
-oracle-skills uninstall -g -s dig   # remove specific skill
-```
+| Profile | Count | What |
+|---------|-------|------|
+| minimal | 8 | Daily ritual: forward, rrr, recap, standup, go |
+| standard | 13 | + discovery: trace, dig, learn, talk-to, awaken |
+| full | 31 | Everything |
+
+Switch: `/go minimal`, `/go standard`, `/go full`, `/go + soul`
+
+Features stack on any profile: `+soul`, `+network`, `+workspace`, `+creator`
 
 <!-- profiles:start -->
 
@@ -47,7 +43,7 @@ Switch anytime: `/go minimal`, `/go standard`, `/go full`, `/go + soul`
 
 ## Skills
 
-Oracle skills extend your agent's capabilities with specialized workflows:
+<!-- skills:start -->
 
 | # | Skill | Type | Description |
 |---|-------|------|-------------|
@@ -85,29 +81,24 @@ Oracle skills extend your agent's capabilities with specialized workflows:
 | 30 | **workon** | skill | Work on an issue OR resume a killed worktree |
 | 31 | **worktree** | skill | Git worktree for parallel work |
 
-*Generated: 2026-03-20 12:04:38 UTC*
+<!-- skills:end -->
 
-## Supported Agents
+## Agents
 
 Claude Code, OpenCode, Codex, Cursor, Amp, Kilo Code, Roo Code, Goose, Gemini CLI, Antigravity, GitHub Copilot, OpenClaw, Droid, Windsurf, Cline, Aider, Continue, Zed
-
-Run `oracle-skills agents` to see detected agents and paths.
 
 ## CLI
 
 ```
-oracle-skills agents             # list supported agents
-oracle-skills about              # prereqs check + system status
-oracle-skills init               # first-time setup (standard profile)
-oracle-skills install -g -y      # install all skills globally
-oracle-skills select -g          # interactive skill picker
-oracle-skills uninstall -g -y    # remove all skills
-oracle-skills uninstall -g -s X  # remove specific skill(s)
-oracle-skills list -g            # show installed skills
-oracle-skills profiles           # list profiles
-oracle-skills profiles minimal   # show skills in a profile
+oracle-skills install -g -y      # install all
+oracle-skills init               # standard profile
+oracle-skills select -g          # interactive picker
+oracle-skills uninstall -g -y    # remove all
+oracle-skills list -g            # show installed
+oracle-skills agents             # detected agents
+oracle-skills about              # system status
 ```
 
 ## Origin
 
-By [Nat Weerawan](https://github.com/nazt) — [Soul Brews Studio](https://github.com/Soul-Brews-Studio) · [Community](https://www.facebook.com/groups/1461988771737551). MIT.
+[Nat Weerawan](https://github.com/nazt) — [Soul Brews Studio](https://github.com/Soul-Brews-Studio) · MIT
