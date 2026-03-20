@@ -59,7 +59,8 @@ Read those top 5 files. This recovers the same context `/compact` restores — h
 ### Step 4: Dig last session
 
 ```bash
-PROJECT_BASE=$(ls -d "$HOME/.claude/projects/"*"$(basename "$(pwd)")" 2>/dev/null | head -1)
+ENCODED_PWD=$(pwd | sed 's|^/|-|; s|/|-|g')
+PROJECT_BASE=$(ls -d "$HOME/.claude/projects/${ENCODED_PWD}" 2>/dev/null | head -1)
 export PROJECT_DIRS="$PROJECT_BASE"
 python3 ~/.claude/skills/dig/scripts/dig.py 1
 ```
