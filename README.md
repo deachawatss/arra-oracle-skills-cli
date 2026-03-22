@@ -1,34 +1,29 @@
 # oracle-skills
 
-37 skills for AI coding agents. 18 agents supported. Install once, use everywhere.
+37 skills for AI coding agents. 18 agents supported.
 
 ## Install
 
 ```bash
-# Install all skills globally
 bunx --bun oracle-skills@github:Soul-Brews-Studio/oracle-skills-cli install -g -y
-
-# Install specific profile
-bunx --bun oracle-skills@github:Soul-Brews-Studio/oracle-skills-cli init -p standard
-
-# Install specific version
-bunx --bun oracle-skills@github:Soul-Brews-Studio/oracle-skills-cli#v3.3.0-alpha.10 install -g -y
-
-# From local clone
-bun run src/cli/index.ts install -g -y
 ```
 
 ## Profiles
 
-| Profile | Count | What |
-|---------|-------|------|
-| minimal | 8 | Daily ritual: forward, rrr, recap, standup, go |
-| standard | 13 | + discovery: trace, dig, learn, talk-to, awaken |
-| full | 31 | Everything |
+```
+oracle-skills init                    # minimal (8 skills, default)
+oracle-skills init -p standard        # standard (13 skills)
+oracle-skills install -g -y           # full (all skills)
+oracle-skills select -g               # interactive picker
+oracle-skills uninstall -g -y         # remove all
+```
 
-Switch: `/go minimal`, `/go standard`, `/go full`, `/go + soul`
+## Switch
 
-Features stack on any profile: `+soul`, `+network`, `+workspace`, `+creator`
+```
+/go minimal          /go standard          /go full
+/go + soul           /go + network         /go + workspace         /go + creator
+```
 
 <!-- profiles:start -->
 
@@ -102,28 +97,6 @@ Switch anytime: `/go minimal`, `/go standard`, `/go full`, `/go + soul`
 ## Agents
 
 Claude Code, OpenCode, Codex, Cursor, Amp, Kilo Code, Roo Code, Goose, Gemini CLI, Antigravity, GitHub Copilot, OpenClaw, Droid, Windsurf, Cline, Aider, Continue, Zed
-
-## CLI
-
-```
-oracle-skills install -g -y      # install all
-oracle-skills init               # standard profile
-oracle-skills select -g          # interactive picker
-oracle-skills uninstall -g -y    # remove all
-oracle-skills list -g            # show installed
-oracle-skills agents             # detected agents
-oracle-skills about              # system status
-```
-
-## Private Skills
-
-Some skills are distributed separately:
-
-| Skill | Repo | Install |
-|-------|------|---------|
-| oraclenet | `Soul-Brews-Studio/oraclenet-skill` (private) | `ghq get -p Soul-Brews-Studio/oraclenet-skill && cp -r $(ghq root)/github.com/Soul-Brews-Studio/oraclenet-skill/oraclenet ~/.claude/skills/` |
-
-Uninstall: `rm -rf ~/.claude/skills/<skill-name>`
 
 ## Origin
 
