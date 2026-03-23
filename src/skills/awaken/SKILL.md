@@ -98,6 +98,7 @@ Auto-detect and fix. Run ALL checks silently, then display results:
 | Git identity | `git config user.name && git config user.email` | ช่วย set ทันที: `git config --global user.name "Name"` etc. |
 | gh CLI installed | `gh --version` | แนะนำติดตั้ง (ข้ามได้ แต่จะไม่สามารถแนะนำตัวกับครอบครัว) |
 | gh CLI authenticated | `gh auth status` | ถ้าไม่ได้ login → **guided flow** (see below) |
+| gh git credential | `git config --global credential.helper \| grep gh` | ถ้าไม่มี → `gh auth setup-git` (ป้องกัน git push fail) |
 | bun | `bun --version` | แนะนำติดตั้ง (ข้ามได้) |
 | oracle-skills | `oracle-skills --version` | แนะนำ: `curl -fsSL https://raw.githubusercontent.com/Soul-Brews-Studio/oracle-skills-cli/main/install.sh \| bash` |
 | Git repo | `git rev-parse --is-inside-work-tree` | ถ้าไม่ใช่ → `git init` ให้ |
@@ -366,7 +367,7 @@ Fast mode skips /learn and /trace. Philosophy is given directly from mother-orac
    cat > ψ/.gitignore << 'EOF'
    active/
    memory/logs/
-   learn/
+   learn/**/origin
    .awaken-state.json
    EOF
    ```
