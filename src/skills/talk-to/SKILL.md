@@ -1,7 +1,7 @@
 ---
 name: talk-to
-description: Talk to another Oracle agent via threads. Use when user says "talk to", "message", "chat with", or wants to communicate with another agent (e.g. "talk to pulse", "message neo"). Do NOT trigger for OracleNet social feed (use /oraclenet), skill management (use /oracle), or family registry (use /oracle-family-scan).
-argument-hint: "<agent-name> [message]"
+description: Talk to another Oracle agent via contacts + threads. Use when user says "talk to", "message", "chat with", or wants to communicate with another agent (e.g. "talk to pulse", "message neo"). Do NOT trigger for OracleNet social feed (use /oraclenet), skill management (use /oracle), or family registry (use /oracle-family-scan).
+argument-hint: "<agent-name> [message] [--maw | --thread | --inbox]"
 ---
 
 # /talk-to - Agent Messaging
@@ -18,11 +18,47 @@ Send messages to agents via Oracle threads. Each agent has a persistent channel 
 /talk-to --list                                # show channels
 /talk-to arthur --maw "quick ping"             # force maw transport (real-time tmux)
 /talk-to arthur --thread "async question"      # force MCP thread transport
+/talk-to arthur --inbox "offline message"      # force inbox transport (file write)
 ```
 
 ## Mode 0: No arguments
 
 If ARGUMENTS is empty, show usage help then run --list.
+
+## Step 0: Contacts Lookup
+
+**Always read contacts first.** This is the source of truth for agent routing.
+
+```bash
+CONTACTS="$(pwd)/ψ/contacts.json"
+if [ ! -f "$CONTACTS" ]; then
+  # Fallback path
+  CONTACTS="$(pwd)/.oracle/contacts.json"
+fi
+
+if [ -f "$CONTACTS" ]; then
+  MAW=$(jq -r ".contacts.\"$AGENT\".maw // empty" "$CONTACTS")
+  INBOX=$(jq -r ".contacts.\"$AGENT\".inbox // empty" "$CONTACTS")
+  THREAD=$(jq -r ".contacts.\"$AGENT\".thread // empty" "$CONTACTS")
+  NOTES=$(jq -r ".contacts.\"$AGENT\".notes // empty" "$CONTACTS")
+  FOUND_IN_CONTACTS=true
+else
+  FOUND_IN_CONTACTS=false
+fi
+```
+
+**If agent not found in contacts AND not found in maw ls**:
+
+```
+I don't know "{agent}".
+
+  /contacts add {agent}    — register transport info
+  /talk-to {agent} --thread "message"  — try MCP thread anyway
+```
+
+Offer `/contacts add` first. If user insists, fall through to MCP thread.
+
+---
 
 ## Transport Selection
 
@@ -31,22 +67,39 @@ If ARGUMENTS is empty, show usage help then run --list.
 | (none) | **auto** — detect best | Default |
 | `--maw` | `maw hey` (tmux sendkeys) | Real-time, local fleet, low latency |
 | `--thread` | MCP `oracle_thread` | Async, persistent, cross-machine |
+| `--inbox` | File write to `ψ/inbox/` | Offline, no maw/MCP needed |
 
 **Auto-detect logic** (when no flag):
-1. Check `ψ/contacts.json` for target agent's transport info
-2. Is target a local tmux session? (`maw ls` or contacts has `maw` field) → use `maw hey`
-3. Otherwise → use MCP thread (async, persistent)
+1. Check `ψ/contacts.json` → has `maw` field? → use `maw hey`
+2. No contacts? → `maw ls 2>/dev/null | grep -q "{agent}"` fallback → use `maw hey`
+3. Neither? → use MCP thread (async, persistent)
 
 ```bash
-# Auto-detect: check if target is a local tmux session
-maw ls 2>/dev/null | grep -q "{agent}" && echo "USE_MAW" || echo "USE_THREAD"
+# Auto-detect: contacts-first, maw ls fallback
+if [ -n "$MAW" ]; then
+  echo "USE_MAW (from contacts: $MAW)"
+elif maw ls 2>/dev/null | grep -q "{agent}"; then
+  echo "USE_MAW (from maw ls)"
+else
+  echo "USE_THREAD"
+fi
 ```
 
 When using `--maw`:
 1. Compose message from intent
-2. `maw hey {agent}-oracle '{message}'`
-3. Optionally `maw peek {agent}-oracle` to check response
+2. Use contacts maw name if available: `maw hey {MAW or agent-oracle} '{message}'`
+3. Optionally `maw peek {agent}` to check response
 4. Confirm: `Sent via maw to {agent}`
+
+When using `--inbox`:
+1. Compose message from intent
+2. Check contacts for inbox path — if empty, error: `No inbox path for {agent}. Run /contacts show {agent}`
+3. Write message file:
+   ```bash
+   SELF="$(basename $(pwd) | sed 's/-oracle$//')"
+   echo "$MESSAGE" > "$INBOX/$(date +%Y%m%d_%H%M)_from_${SELF}.md"
+   ```
+4. Confirm: `Dropped to {agent}'s inbox`
 
 When using `--thread` (or auto-detected thread):
 Fall through to Mode 3 (one-shot) below.
@@ -71,7 +124,7 @@ Skip lookup. One MCP call.
 
 1. Compose message from intent
 2. `arra_thread({ title: "channel:{agent}", message, role: "human" })`
-3. **Notify**: `Bash maw hey {agent}-oracle 'Thread #{id} from {self}: {preview}'`
+3. **Notify**: `Bash maw hey {MAW or agent-oracle} 'Thread #{id} from {self}: {preview}'`
    - If `maw hey` fails → warn only, don't error (thread already sent)
 4. Confirm: `Created channel:{agent} (thread #{id})`
 
@@ -81,7 +134,7 @@ Skip lookup. One MCP call.
 2. If first arg is `#{id}` → post directly to that thread ID
 3. Otherwise: `arra_threads()` → find `channel:{agent}`, create if missing
 4. Post message to thread
-5. **Notify**: `Bash maw hey {agent}-oracle 'Thread #{id} from {self}: {preview}'`
+5. **Notify**: `Bash maw hey {MAW or agent-oracle} 'Thread #{id} from {self}: {preview}'`
    - If `maw hey` fails → warn only, don't error (thread already sent)
 6. `arra_thread_read({ threadId })` → show any agent responses
 7. Confirm: `Posted to channel:{agent} (thread #{id})`
@@ -99,7 +152,7 @@ Like Ralph loop — AI drives the conversation autonomously. No user prompts bet
    d. After each exchange, briefly note what you learned
    e. **Stop when**: enough insight gathered, conversation circling, or 10 iterations hit
 4. **Notify** (once, after opening message):
-   `Bash maw hey {agent}-oracle 'Thread #{id} from {self}: {preview}'`
+   `Bash maw hey {MAW or agent-oracle} 'Thread #{id} from {self}: {preview}'`
    - If `maw hey` fails → warn only, don't error
 5. Show summary:
    ```
@@ -137,11 +190,11 @@ If the message already reads like a direct message (e.g. `"What's your status?"`
 After posting to a thread, notify the target agent via `maw hey`:
 
 ```
-maw hey {agent}-oracle 'Thread #{id} from {self}: {first 60 chars of message}'
+maw hey {MAW or agent-oracle} 'Thread #{id} from {self}: {first 60 chars of message}'
 ```
 
+- `{MAW}` = contacts maw field (e.g. "mawjs-oracle") — preferred over `{agent}-oracle`
 - `{self}` = current Oracle's name (e.g. "Mother Oracle")
-- `{agent}` = target agent name (lowercase)
 - `{preview}` = first ~60 chars of the posted message
 - Runs **once per /talk-to invocation** (not per loop iteration)
 - **Fail-safe**: if `maw hey` errors, log warning and continue — the thread is the source of truth

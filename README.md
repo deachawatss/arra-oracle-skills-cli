@@ -59,7 +59,7 @@ npx arra-oracle-skills@3.7.2 install -g -y --agent claude-code codex opencode
 | 20 | **philosophy** | skill | Display Oracle philosophy |
 | 21 | **resonance** | skill | Capture a resonance moment |
 | 22 | **standup** | skill | Daily standup check |
-| 23 | **talk-to** | skill | Talk to another Oracle agent via threads |
+| 23 | **talk-to** | skill | Talk to another Oracle agent |
 | 24 | **team-agents** | skill | Spin up coordinated agent teams for any task |
 | 25 | **trace** | skill | Find projects, code |
 | 26 | **vault** | skill | Connect external knowledge bases (Obsidian |
