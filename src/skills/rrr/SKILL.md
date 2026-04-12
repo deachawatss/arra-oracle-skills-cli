@@ -21,6 +21,35 @@ argument-hint: "[--detail | --dig | --deep]"
 
 ---
 
+## Oracle Root Detection (REQUIRED — run before any ψ/ write)
+
+**Every skill that writes to ψ/ MUST detect the oracle root first.** Do not assume `pwd` is the oracle repo.
+
+```bash
+# Step 1: Find git root
+ORACLE_ROOT=$(git rev-parse --show-toplevel 2>/dev/null)
+
+# Step 2: Cross-check — oracle repo has CLAUDE.md + ψ/
+if [ -n "$ORACLE_ROOT" ] && [ -f "$ORACLE_ROOT/CLAUDE.md" ] && { [ -d "$ORACLE_ROOT/ψ" ] || [ -L "$ORACLE_ROOT/ψ" ]; }; then
+  PSI="$ORACLE_ROOT/ψ"
+elif [ -f "$(pwd)/CLAUDE.md" ] && { [ -d "$(pwd)/ψ" ] || [ -L "$(pwd)/ψ" ]; }; then
+  # Fallback: pwd has oracle markers
+  ORACLE_ROOT="$(pwd)"
+  PSI="$ORACLE_ROOT/ψ"
+else
+  # Last resort: warn and use pwd
+  echo "⚠️ Not in oracle repo (no CLAUDE.md + ψ/ at git root). Writing to pwd."
+  ORACLE_ROOT="$(pwd)"
+  PSI="$ORACLE_ROOT/ψ"
+fi
+```
+
+**Why**: prevents retros writing to `~/ψ/` (home) or incubated repo's `ψ/` instead of the oracle's own vault.
+
+All paths below use `$PSI/` instead of bare `ψ/`.
+
+---
+
 ## /rrr (Default)
 
 ### 1. Gather
@@ -33,7 +62,7 @@ git log --oneline -10 && git diff --stat HEAD~5
 ### 1.5. Detect Session (optional)
 
 ```bash
-ENCODED_PWD=$(pwd | sed 's|^/|-|; s|[/.]|-|g')
+ENCODED_PWD=$(echo "$ORACLE_ROOT" | sed 's|^/|-|; s|[/.]|-|g')
 PROJECT_DIR="$HOME/.claude/projects/${ENCODED_PWD}"
 LATEST_JSONL=$(ls -t "$PROJECT_DIR"/*.jsonl 2>/dev/null | head -1)
 if [ -n "$LATEST_JSONL" ]; then
@@ -50,10 +79,10 @@ If detection fails, skip silently.
 
 ### 2. Write Retrospective
 
-**Path**: `ψ/memory/retrospectives/YYYY-MM/DD/HH.MM_slug.md`
+**Path**: `$PSI/memory/retrospectives/YYYY-MM/DD/HH.MM_slug.md`
 
 ```bash
-mkdir -p "ψ/memory/retrospectives/$(date +%Y-%m/%d)"
+mkdir -p "$PSI/memory/retrospectives/$(date +%Y-%m/%d)"
 ```
 
 Write immediately, no prompts. Include:
@@ -67,7 +96,7 @@ Write immediately, no prompts. Include:
 
 ### 3. Write Lesson Learned
 
-**Path**: `ψ/memory/learnings/YYYY-MM-DD_slug.md`
+**Path**: `$PSI/memory/learnings/YYYY-MM-DD_slug.md`
 
 ### 4. Oracle Sync
 
@@ -79,7 +108,7 @@ arra_learn({ pattern: [lesson content], concepts: [tags], source: "rrr: REPO" })
 
 Retro files are written to vault (wherever `ψ` symlink resolves).
 
-**Do NOT `git add ψ/`** — it's a symlink to the vault. Vault files are shared state, not committed to repos.
+**Do NOT `git add ψ/`** — it may be a symlink to the vault. Vault files are shared state, not committed to repos.
 
 ---
 
@@ -124,7 +153,7 @@ Then steps 3-5 same as default.
 Discover project dirs using full-path encoding (same as Claude's `.claude/projects/` naming), including worktree dirs:
 
 ```bash
-ENCODED_PWD=$(pwd | sed 's|^/|-|; s|[/.]|-|g')
+ENCODED_PWD=$(echo "$ORACLE_ROOT" | sed 's|^/|-|; s|[/.]|-|g')
 PROJECT_BASE=$(ls -d "$HOME/.claude/projects/${ENCODED_PWD}" 2>/dev/null | head -1)
 export PROJECT_DIRS="$PROJECT_BASE"
 for wt in "${PROJECT_BASE}"-wt*; do [ -d "$wt" ] && export PROJECT_DIRS="$PROJECT_DIRS:$wt"; done

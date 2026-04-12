@@ -46,7 +46,12 @@ Skip silently if detection fails.
 
 Resolve vault path first:
 ```bash
-PSI=$(readlink -f ψ 2>/dev/null || echo "ψ")
+ORACLE_ROOT=$(git rev-parse --show-toplevel 2>/dev/null)
+if [ -n "$ORACLE_ROOT" ] && [ -f "$ORACLE_ROOT/CLAUDE.md" ] && { [ -d "$ORACLE_ROOT/ψ" ] || [ -L "$ORACLE_ROOT/ψ" ]; }; then
+  PSI=$(readlink -f "$ORACLE_ROOT/ψ" 2>/dev/null || echo "$ORACLE_ROOT/ψ")
+else
+  PSI=$(readlink -f ψ 2>/dev/null || echo "ψ")
+fi
 ```
 
 Write to: `$PSI/inbox/handoff/YYYY-MM-DD_HH-MM_slug.md`
@@ -143,7 +148,12 @@ Created #116: /rrr --deep time-based
 Regardless of whether issues were created, write items to the outbox:
 
 ```bash
-PSI=$(readlink -f ψ 2>/dev/null || echo "ψ")
+ORACLE_ROOT=$(git rev-parse --show-toplevel 2>/dev/null)
+if [ -n "$ORACLE_ROOT" ] && [ -f "$ORACLE_ROOT/CLAUDE.md" ] && { [ -d "$ORACLE_ROOT/ψ" ] || [ -L "$ORACLE_ROOT/ψ" ]; }; then
+  PSI=$(readlink -f "$ORACLE_ROOT/ψ" 2>/dev/null || echo "$ORACLE_ROOT/ψ")
+else
+  PSI=$(readlink -f ψ 2>/dev/null || echo "ψ")
+fi
 OUTBOX_DIR="$PSI/outbox"
 mkdir -p "$OUTBOX_DIR"
 ```

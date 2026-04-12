@@ -9,11 +9,21 @@
 
 The main thread loses context during long sessions (compaction, attention drift, context window limits). Teammates reconstruct from **artifacts** (git log, file mtimes, ψ/ files) — they don't rely on conversation memory. The result: accurate timelines, complete pattern extraction, and AI diaries that reflect what actually happened.
 
-## Step 0: Gather context
+## Step 0: Oracle Root + Gather context
 
 ```bash
 date "+%H:%M %Z (%A %d %B %Y)"
-ROOT="$(pwd)"
+
+# Detect oracle root — don't assume pwd
+ORACLE_ROOT=$(git rev-parse --show-toplevel 2>/dev/null)
+if [ -n "$ORACLE_ROOT" ] && [ -f "$ORACLE_ROOT/CLAUDE.md" ] && { [ -d "$ORACLE_ROOT/ψ" ] || [ -L "$ORACLE_ROOT/ψ" ]; }; then
+  PSI="$ORACLE_ROOT/ψ"
+else
+  ORACLE_ROOT="$(pwd)"
+  PSI="$ORACLE_ROOT/ψ"
+fi
+
+ROOT="$ORACLE_ROOT"
 git log --oneline -15
 git diff --stat HEAD~5
 git log --format="%h %ai %s" -10

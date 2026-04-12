@@ -2,15 +2,26 @@
 
 **Use for complex sessions** with lots of changes, multiple features, or when you want comprehensive analysis.
 
-## Step 0: Timestamp + Paths
+## Step 0: Oracle Root + Timestamp + Paths
 
 ```bash
 date "+%H:%M %Z (%A %d %B %Y)"
-ROOT="$(pwd)"
+
+# Detect oracle root — don't assume pwd
+ORACLE_ROOT=$(git rev-parse --show-toplevel 2>/dev/null)
+if [ -n "$ORACLE_ROOT" ] && [ -f "$ORACLE_ROOT/CLAUDE.md" ] && { [ -d "$ORACLE_ROOT/ψ" ] || [ -L "$ORACLE_ROOT/ψ" ]; }; then
+  PSI="$ORACLE_ROOT/ψ"
+else
+  echo "⚠️ Not in oracle repo. Using pwd."
+  ORACLE_ROOT="$(pwd)"
+  PSI="$ORACLE_ROOT/ψ"
+fi
+
+ROOT="$ORACLE_ROOT"
 TODAY=$(date +%Y-%m-%d)
 TIME=$(date +%H%M)
 DATE_PATH=$(date "+%Y-%m/%d")
-mkdir -p "$ROOT/ψ/memory/retrospectives/$DATE_PATH"
+mkdir -p "$PSI/memory/retrospectives/$DATE_PATH"
 ```
 
 ## Step 1: Launch 5 Parallel Agents
@@ -82,7 +93,7 @@ Return: Related learnings, past insights, patterns to apply
 
 After all agents return, main agent compiles into full retrospective:
 
-**Location**: `ψ/memory/retrospectives/$DATE_PATH/${TIME}_[slug].md`
+**Location**: `$PSI/memory/retrospectives/$DATE_PATH/${TIME}_[slug].md`
 
 Include all standard sections PLUS:
 - Deep git analysis (from Agent 1)
@@ -93,7 +104,7 @@ Include all standard sections PLUS:
 
 ## Step 3: Write Lesson Learned
 
-**Location**: `ψ/memory/learnings/${TODAY}_[slug].md`
+**Location**: `$PSI/memory/learnings/${TODAY}_[slug].md`
 
 With --deep, lesson learned should be more comprehensive:
 - Multiple patterns identified
@@ -113,6 +124,7 @@ oracle_learn({
 ## Step 5: Commit
 
 ```bash
+cd "$ORACLE_ROOT"
 git add ψ/memory/retrospectives/ ψ/memory/learnings/
 git commit -m "rrr: deep analysis - [slug]"
 ```
