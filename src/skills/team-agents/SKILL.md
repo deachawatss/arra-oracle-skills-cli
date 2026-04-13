@@ -37,7 +37,19 @@ Without this flag, TeamCreate/SendMessage/TaskList tools don't exist. Fall back 
 /team-agents shutdown                  # graceful shutdown (SendMessage per agent)
 /team-agents cleanup                   # kill idle orphan panes (safe)
 /team-agents killshot                  # kill ALL non-lead panes (nuclear)
+/team-agents doctor [--fix]            # detect ghosts + orphans + stale tasks
 ```
+
+### Flags
+
+| Flag | Effect |
+|------|--------|
+| `--manual` | Human controls agents via lead relay |
+| `--panes` | Peek at tmux panes |
+| `--plan` | Show team design, wait for approval |
+| `--roles N` | Override default agent count |
+| `--model X` | Override default model (sonnet/opus/haiku) |
+| `--isolated` | Each agent gets its own git worktree (#224) |
 
 ---
 
@@ -754,6 +766,62 @@ Shutdown is the most common broadcast case. Without it, you must manually send s
 | `/trace --deep` | Wave 2 agents could coordinate findings |
 | `/learn --deep` | Doc agents could build on each other's output |
 | Any new skill | Import the pattern instead of reinventing |
+
+---
+
+## Worktree Isolation (`--isolated`) (#224)
+
+When multiple agents edit code simultaneously, last-write-wins. `--isolated` gives each agent its own git worktree:
+
+```
+/team-agents --manual --isolated "build feature"
+```
+
+Each agent spawns with `isolation: "worktree"` in the Agent tool:
+
+```
+Agent({
+  name: "builder",
+  isolation: "worktree",
+  ...
+})
+```
+
+Claude Code creates the worktree at `.claude/worktrees/agent-<id>` and cleans up if no changes were made. If changes exist, the worktree path + branch are returned for the lead to merge.
+
+**Note**: Worktree cleanup is NOT automatic if the agent crashes. `team-ops doctor` detects orphaned worktrees and `--fix` removes them.
+
+---
+
+## TMux Internals (#222)
+
+From Claude Code source (`PaneBackendExecutor.ts`):
+
+### Pane Creation
+
+```
+First agent:  tmux split-window -t <leaderPane> -h -l 70%
+Additional:   alternating v/h splits from existing teammate panes
+Rebalance:    select-layout main-vertical + resize-pane -t <leader> -x 30%
+Border:       select-pane -P bg=default,fg=<color>
+Title:        select-pane -T <name>
+```
+
+### Sequential Lock
+
+`acquirePaneCreationLock()` prevents race conditions when spawning multiple agents in parallel. 200ms delay after each pane creation for shell init.
+
+### Pane Tagging
+
+Our `spawn-skills.sh` tags panes with tmux user options for reliable identity:
+
+```bash
+tmux set-option -p -t <paneId> @agent-name "scout"
+tmux set-option -p -t <paneId> @team-name "myteam"
+tmux select-pane -t <paneId> -T "scout@myteam"
+```
+
+Readable anytime: `tmux display-message -t <paneId> -p '#{@agent-name}'`
 
 ---
 

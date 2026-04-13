@@ -4,6 +4,7 @@
 #
 # Creates .claude/skills/<agent>/SKILL.md for each agent
 # These are ephemeral — moved to /tmp on shutdown
+# Also tags tmux panes with @agent-name for reliable identity (#225)
 
 TEAM_NAME="${1:?Usage: spawn-skills.sh <team-name> <agent1> <agent2> ...}"
 shift
@@ -16,6 +17,30 @@ fi
 
 SKILLS_DIR="$HOME/.claude/skills"
 CREATED=0
+
+# Tag tmux panes with agent names (#225)
+SESSION=$(tmux display-message -p '#S' 2>/dev/null)
+tag_panes() {
+  [ -z "$SESSION" ] && return
+  local PANE_COUNT=$(tmux list-panes -t "$SESSION" 2>/dev/null | wc -l)
+  local AGENT_IDX=0
+
+  # Team agents are the newest panes (highest index)
+  local FIRST_TEAM_PANE=$((PANE_COUNT - ${#AGENTS[@]}))
+  [ "$FIRST_TEAM_PANE" -lt 1 ] && FIRST_TEAM_PANE=1
+
+  for i in $(seq "$FIRST_TEAM_PANE" $((PANE_COUNT - 1))); do
+    local PANE_ID=$(tmux list-panes -t "$SESSION" -F "#{pane_index} #{pane_id}" 2>/dev/null | awk -v idx="$i" '$1==idx {print $2}')
+    [ -z "$PANE_ID" ] && continue
+    [ "$AGENT_IDX" -ge "${#AGENTS[@]}" ] && break
+
+    local AGENT="${AGENTS[$AGENT_IDX]}"
+    tmux select-pane -t "$PANE_ID" -T "${AGENT}@${TEAM_NAME}" 2>/dev/null
+    tmux set-option -p -t "$PANE_ID" @agent-name "$AGENT" 2>/dev/null
+    tmux set-option -p -t "$PANE_ID" @team-name "$TEAM_NAME" 2>/dev/null
+    AGENT_IDX=$((AGENT_IDX + 1))
+  done
+}
 
 echo ""
 echo "🔧 Creating team skills for $TEAM_NAME"
@@ -76,7 +101,11 @@ SKILL
   CREATED=$((CREATED + 1))
 done
 
+# Tag tmux panes after skill creation
+tag_panes
+
 echo ""
 echo "  Created $CREATED agent skills for team $TEAM_NAME"
+[ -n "$SESSION" ] && echo "  🏷️ Tagged tmux panes with @agent-name"
 echo "  💡 Restart Claude Code to activate, or they load on next /command"
 echo ""

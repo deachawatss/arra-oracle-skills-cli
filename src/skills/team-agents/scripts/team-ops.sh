@@ -104,6 +104,10 @@ print(', '.join(m['name'] for m in config.get('members', [])))
     echo ""
     ;;
 
+  doctor|doc)
+    bash "$SCRIPT_DIR/doctor.sh" "$@"
+    ;;
+
   mailbox)
     # /mailbox is its own skill — data lives in ψ/, not ~/.claude/
     MAILBOX_SCRIPT="$(dirname "$SCRIPT_DIR")/../mailbox/scripts/mailbox.sh"
@@ -126,6 +130,7 @@ print(', '.join(m['name'] for m in config.get('members', [])))
     echo "    shutdown-skills <team> <agents> 📦 Archive skills to /tmp"
     echo "    cleanup [--dry-run]           🧹 Kill idle panes (safe)"
     echo "    killshot                      💀 Kill ALL non-lead panes"
+    echo "    doctor [--fix]                🩺 Detect ghosts + orphans"
     echo "    mailbox <cmd> [args]          📬 Persistent agent memory"
     echo "    status                        📊 Show everything"
     echo ""
