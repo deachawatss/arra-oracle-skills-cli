@@ -82,7 +82,24 @@ export async function installSkills(
     }
     // null means "all skills" (full/lab)
   } else if (options.skills && options.skills.length > 0) {
-    skillsToInstall = allSkills.filter((s) => options.skills!.includes(s.name));
+    // -s without --profile: ADD named skills to whatever is already installed
+    // This makes -s additive — it won't drop existing skills (#221)
+    const alreadyInstalled = new Set<string>();
+    for (const agentName of targetAgents) {
+      const agent = agents[agentName as keyof typeof agents];
+      if (!agent) continue;
+      const dir = options.global ? agent.globalSkillsDir : join(process.cwd(), agent.skillsDir);
+      if (existsSync(dir)) {
+        for (const d of readdirSync(dir, { withFileTypes: true })) {
+          if (d.isDirectory() && !d.name.startsWith('.')) {
+            alreadyInstalled.add(d.name);
+          }
+        }
+      }
+    }
+    const requested = new Set(options.skills);
+    const combined = new Set([...alreadyInstalled, ...requested]);
+    skillsToInstall = allSkills.filter((s) => combined.has(s.name));
   }
 
   if (skillsToInstall.length === 0) {
