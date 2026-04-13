@@ -1,10 +1,10 @@
 ---
 name: dig
 description: Mine Claude Code sessions — timeline, gaps, repo attribution, session history. Use when user says "dig", "sessions", "past sessions", "timeline", "what did I work on", or wants to see session history. Do NOT trigger for finding code/projects (use /trace), exploring repos (use /learn), or current session status (use /recap).
-argument-hint: "[N] | --all | --timeline"
+argument-hint: "[N] | --all | --timeline | --deep"
 ---
 
-# /dig - Session Goldminer
+# /dig - Session Goldminer v2
 
 Mine Claude Code session data for timelines, gaps, and repo attribution. No query needed.
 
@@ -15,9 +15,31 @@ Mine Claude Code session data for timelines, gaps, and repo attribution. No quer
 /dig [N]                # Current repo, N most recent
 /dig --all              # All repos, ALL sessions (auto-detect count)
 /dig --all [N]          # All repos, N most recent
+/dig --deep             # Deep scan — ALL .jsonl files (not just most-recent per project)
+/dig --deep [N]         # Deep scan, N most recent
+/dig --all --deep       # All repos, deep scan — full coverage
 /dig --timeline         # Day-by-day grouped (current repo)
 /dig --all --timeline   # Day-by-day grouped (all repos, ALL sessions)
 ```
+
+### Deep Mode (#216)
+
+Standard `/dig` deduplicates by session basename — only showing the most recent file per session. This misses historical sessions, subagent sessions, and worktree sessions.
+
+`--deep` scans ALL `.jsonl` files across all project directories. Output includes extra fields:
+- `toolCalls` — number of tool invocations in the session
+- `fileSizeKB` — session file size in KB
+- Coverage metadata: `"X of Y sessions"` showing how many were returned vs found
+
+### Timezone (#214)
+
+dig.py v2 auto-detects timezone instead of hardcoding GMT+7:
+1. `MAW_DISPLAY_TZ` env var (e.g., `Asia/Bangkok`, `7`, `America/New_York`)
+2. `TZ` env var
+3. System timezone
+4. Fallback: UTC
+
+Output metadata includes detected timezone name and offset.
 
 ## Step 0: Timestamp
 
@@ -49,8 +71,23 @@ export PROJECT_DIRS=$(ls -d "$HOME/.claude/projects/"*/ | tr '\n' ':')
 Run the dig script. Pass `0` for `--all` (no limit), or N if user specified a count, default 10:
 
 ```bash
-python3 ~/.claude/skills/dig/scripts/dig.py [N]
+python3 ~/.claude/skills/dig/scripts/dig.py [N] [--deep]
 # N=10 (default), N=0 (scan all sessions), N=50 (50 most recent)
+# --deep: scan ALL .jsonl files (not just most-recent per basename)
+```
+
+### Deep Mode Display
+
+When `--deep` is used, add extra columns to the table:
+
+```markdown
+| # | Date | Session | Min | Repo | Msgs | Tools | Size | Focus |
+```
+
+And show coverage in the footer:
+
+```markdown
+**Coverage**: [returned]/[found] sessions | **Timezone**: [tz_name] (GMT+[offset])
 ```
 
 ## Step 3: Display Timeline

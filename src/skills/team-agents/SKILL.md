@@ -484,6 +484,36 @@ Spawn agents via the regular Agent tool without team_name. Results come back as 
 8. **Recommended**: 3-5 agents, 5-6 tasks per agent max
 9. **Don't use for small tasks** — if it takes < 5 minutes solo, don't team it
 
+## Broadcast Limitation (#212)
+
+**Known issue**: `SendMessage` can only target ONE agent at a time. There is no native broadcast/multicast.
+
+### Workaround: Sequential Send
+
+To send the same message to all teammates:
+
+```
+# Must send individually — no broadcast primitive
+SendMessage({ to: "agent-1", message: "..." })
+SendMessage({ to: "agent-2", message: "..." })
+SendMessage({ to: "agent-3", message: "..." })
+```
+
+### Workaround: Lead as Relay
+
+For structured broadcasts (e.g., shutdown), the lead iterates over the known agent list:
+
+```
+for agent in team_agents:
+    SendMessage({ to: agent, message: { type: "shutdown_request" } })
+```
+
+### Why This Matters
+
+Shutdown is the most common broadcast case. Without it, you must manually send shutdown to each agent. The current skill handles this by listing all agents in Step 6, but it's verbose.
+
+**Upstream fix needed**: A `SendMessage({ to: "all@team-name", ... })` or `BroadcastMessage` tool would eliminate this friction. Tracked as #212.
+
 ---
 
 ## Integration with Other Skills
