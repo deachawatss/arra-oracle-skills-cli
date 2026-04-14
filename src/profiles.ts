@@ -8,16 +8,16 @@
 
 /** Standard profile — daily driver skills (always installed) */
 export const STANDARD_SKILLS = [
-  'about-oracle', 'awaken', 'create-shortcut', 'dig', 'forward', 'go',
+  'about-oracle', 'awaken', 'bud', 'create-shortcut', 'dig', 'forward', 'go',
   'learn', 'oracle-family-scan', 'oracle-soul-sync-update',
-  'recap', 'rrr', 'skills-list', 'standup', 'talk-to', 'trace', 'xray',
+  'recap', 'rrr', 'skills-list', 'standup', 'talk-to', 'team-agents', 'trace', 'xray',
 ] as const;
 
 /** Lab-only skills — experimental, not in standard or full */
 export const LAB_SKILLS = [
-  'bampenpien', 'bud', 'contacts', 'dream', 'feel', 'fleet', 'harden',
+  'bampenpien', 'contacts', 'dream', 'feel', 'fleet', 'harden',
   'i-believed', 'inbox', 'machines', 'mailbox', 'morpheus',
-  'release', 'schedule', 'team-agents', 'vault', 'warp', 'watch', 'worktree', 'wormhole',
+  'release', 'schedule', 'vault', 'warp', 'watch', 'worktree', 'wormhole',
 ] as const;
 
 /** Zombie skills — internal development candidates from arra-symbiosis-skills.

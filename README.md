@@ -102,7 +102,7 @@ npx arra-oracle-skills@3.9.0-alpha.4 install -g -y --agent claude-code codex ope
 
 | Profile | Count | Skills |
 |---------|-------|--------|
-| **standard** | 16 | `about-oracle`, `awaken`, `create-shortcut`, `dig`, `forward`, `go`, `learn`, `oracle-family-scan`, `oracle-soul-sync-update`, `recap`, `rrr`, `skills-list`, `standup`, `talk-to`, `trace`, `xray` |
+| **standard** | 18 | `about-oracle`, `awaken`, `bud`, `create-shortcut`, `dig`, `forward`, `go`, `learn`, `oracle-family-scan`, `oracle-soul-sync-update`, `recap`, `rrr`, `skills-list`, `standup`, `talk-to`, `team-agents`, `trace`, `xray` |
 | **full** | 56 | all |
 | **lab** | 56 | all |
 
