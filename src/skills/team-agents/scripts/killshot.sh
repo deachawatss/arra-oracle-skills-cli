@@ -1,6 +1,8 @@
 #!/usr/bin/env bash
 # /team-agents killshot — kill ALL non-lead panes (nuclear option)
 # Usage: bash ~/.claude/skills/team-agents/scripts/killshot.sh
+#
+# Uses maw commands instead of raw tmux — consistent routing through maw layer.
 
 SESSION=$(tmux display-message -p '#S' 2>/dev/null)
 if [ -z "$SESSION" ]; then
@@ -8,7 +10,8 @@ if [ -z "$SESSION" ]; then
   exit 0
 fi
 
-PANE_COUNT=$(tmux list-panes -t "$SESSION" | wc -l)
+PANE_COUNT=$(maw panes 2>/dev/null | wc -l)
+[ "$PANE_COUNT" -le 0 ] && PANE_COUNT=1
 
 if [ "$PANE_COUNT" -le 1 ]; then
   echo "✅ Only 1 pane (lead) — nothing to kill"
@@ -23,17 +26,13 @@ KILLED=0
 
 # Work backwards to avoid index shifting
 for i in $(seq $((PANE_COUNT - 1)) -1 1); do
-  PANE_ID=$(tmux list-panes -t "$SESSION" -F "#{pane_index} #{pane_id}" 2>/dev/null | awk -v idx="$i" '$1==idx {print $2}')
-  [ -z "$PANE_ID" ] && continue
-
-  # Capture info before killing
-  CAPTURE=$(tmux capture-pane -t "$SESSION:0.$i" -p 2>/dev/null | tail -3)
+  # Capture info before killing via maw
+  CAPTURE=$(maw capture "$SESSION" --pane "$i" --lines 3 2>/dev/null)
   MODEL=$(echo "$CAPTURE" | grep -oP '(Opus|Sonnet|Haiku) [0-9.]+' | head -1)
   [ -z "$MODEL" ] && MODEL="unknown"
-  SIZE=$(tmux list-panes -t "$SESSION" -F "#{pane_index} #{pane_width}x#{pane_height}" 2>/dev/null | awk -v idx="$i" '$1==idx {print $2}')
 
-  tmux kill-pane -t "$PANE_ID" 2>/dev/null
-  printf "  Pane %-3s %-10s %-12s → killed\n" "$i" "$SIZE" "$MODEL"
+  maw kill "$SESSION" --pane "$i" 2>/dev/null
+  printf "  Pane %-3s %-12s → killed\n" "$i" "$MODEL"
   KILLED=$((KILLED + 1))
 done
 

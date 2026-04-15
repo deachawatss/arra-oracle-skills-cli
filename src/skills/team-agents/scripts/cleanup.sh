@@ -2,19 +2,23 @@
 # /team-agents cleanup helper — kill orphaned agent panes after team shutdown
 # Usage: bash ~/.claude/skills/team-agents/scripts/cleanup.sh [--dry-run]
 #
-# Finds panes that were team agents (not the lead, not pre-existing)
-# and kills them. Safe — only kills panes with idle claude prompts.
+# Uses maw commands instead of raw tmux — consistent routing through maw layer.
+# Finds panes that were team agents (not the lead) and kills idle ones.
 
 DRY_RUN=false
 [ "$1" = "--dry-run" ] && DRY_RUN=true
 
-SESSION=$(tmux display-message -p '#S' 2>/dev/null)
-if [ -z "$SESSION" ]; then
-  echo "Not in a tmux session"
+# Get current session panes via maw
+PANES_OUTPUT=$(maw panes 2>/dev/null)
+if [ -z "$PANES_OUTPUT" ]; then
+  echo "Not in a tmux session or maw panes unavailable"
   exit 0
 fi
 
-PANE_COUNT=$(tmux list-panes -t "$SESSION" | wc -l)
+SESSION=$(tmux display-message -p '#S' 2>/dev/null)
+PANE_COUNT=$(echo "$PANES_OUTPUT" | grep -c '│\|pane')
+# Fallback: count from tmux if maw panes output is unexpected
+[ "$PANE_COUNT" -le 0 ] && PANE_COUNT=$(maw panes 2>/dev/null | wc -l)
 
 if [ "$PANE_COUNT" -le 1 ]; then
   echo "✅ Only 1 pane (lead) — nothing to clean"
@@ -30,16 +34,13 @@ SKIPPED=0
 
 # Work backwards (highest pane first) so killing doesn't shift indices
 for i in $(seq $((PANE_COUNT - 1)) -1 1); do
-  PANE_ID=$(tmux list-panes -t "$SESSION" -F "#{pane_index} #{pane_id}" 2>/dev/null | awk -v idx="$i" '$1==idx {print $2}')
-  [ -z "$PANE_ID" ] && continue
-
-  # Capture last 3 lines
-  CAPTURE=$(tmux capture-pane -t "$SESSION:0.$i" -p 2>/dev/null | tail -3)
+  # Capture last 3 lines via maw
+  CAPTURE=$(maw capture "$SESSION" --pane "$i" --lines 3 2>/dev/null)
+  [ -z "$CAPTURE" ] && continue
 
   # Extract info
   MODEL=$(echo "$CAPTURE" | grep -oP '(Opus|Sonnet|Haiku) [0-9.]+' | head -1)
   [ -z "$MODEL" ] && MODEL="unknown"
-  SIZE=$(tmux list-panes -t "$SESSION" -F "#{pane_index} #{pane_width}x#{pane_height}" 2>/dev/null | awk -v idx="$i" '$1==idx {print $2}')
 
   # Check if idle (has ❯ prompt = safe to kill)
   if echo "$CAPTURE" | grep -q '^❯'; then
@@ -48,13 +49,13 @@ for i in $(seq $((PANE_COUNT - 1)) -1 1); do
     STATUS="active"
   fi
 
-  printf "  Pane %-3s %-10s %-12s %s" "$i" "$SIZE" "$MODEL" "$STATUS"
+  printf "  Pane %-3s %-12s %s" "$i" "$MODEL" "$STATUS"
 
   if [ "$STATUS" = "idle" ]; then
     if [ "$DRY_RUN" = true ]; then
       echo "  → would kill"
     else
-      tmux kill-pane -t "$PANE_ID" 2>/dev/null
+      maw kill "$SESSION" --pane "$i" 2>/dev/null
       echo "  → killed"
     fi
     KILLED=$((KILLED + 1))
@@ -70,7 +71,7 @@ if [ "$DRY_RUN" = true ]; then
   echo "  Run without --dry-run to execute"
 else
   echo "  Killed: $KILLED | Skipped: $SKIPPED active"
-  REMAINING=$(tmux list-panes -t "$SESSION" | wc -l)
+  REMAINING=$(maw panes 2>/dev/null | wc -l)
   echo "  Panes remaining: $REMAINING"
 fi
 echo ""

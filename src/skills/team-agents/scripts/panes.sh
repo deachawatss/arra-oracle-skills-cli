@@ -1,10 +1,9 @@
 #!/usr/bin/env bash
-# /team-agents --panes helper v3 — extract real agent params from /proc
+# /team-agents --panes helper v4 — uses maw panes + maw capture
 # Usage: bash ~/.claude/skills/team-agents/scripts/panes.sh [team-name]
 #
-# v3: Reads actual process cmdline from /proc for reliable agent detection.
-#     Extracts --agent-name, --team-name, --model, --agent-color directly.
-#     No more guessing by model or spawn order.
+# v4: Routes through maw layer instead of raw tmux.
+#     Still uses /proc for agent identity (maw doesn't know about agent flags).
 
 TEAM_NAME="${1:-}"
 SESSION=$(tmux display-message -p '#S' 2>/dev/null)
@@ -14,7 +13,10 @@ if [ -z "$SESSION" ]; then
   exit 0
 fi
 
-PANE_COUNT=$(tmux list-panes -t "$SESSION" | wc -l)
+# Get pane count via maw panes
+PANE_LIST=$(maw panes 2>/dev/null)
+PANE_COUNT=$(echo "$PANE_LIST" | wc -l)
+[ "$PANE_COUNT" -le 0 ] && PANE_COUNT=1
 TEAM_FOUND=0
 
 echo ""
@@ -24,7 +26,7 @@ echo "  Pane  Agent        Model        Color   Team         Ctx    Status   PID
 echo "  ───── ──────────── ──────────── ─────── ──────────── ────── ──────── ──────"
 
 for i in $(seq 0 $((PANE_COUNT - 1))); do
-  # Get pane pid
+  # Get pane pid (still need tmux for pid — maw panes doesn't expose it yet)
   PANE_PID=$(tmux list-panes -t "$SESSION" -F "#{pane_index} #{pane_pid}" 2>/dev/null | awk -v idx="$i" '$1==idx {print $2}')
   [ -z "$PANE_PID" ] && continue
 
@@ -51,11 +53,10 @@ for i in $(seq 0 $((PANE_COUNT - 1))); do
   AGENT_TEAM=$(echo "$CMDLINE" | grep -A1 '^--team-name$' | tail -1)
   AGENT_COLOR=$(echo "$CMDLINE" | grep -A1 '^--agent-color$' | tail -1)
   AGENT_MODEL=$(echo "$CMDLINE" | grep -A1 '^--model$' | tail -1)
-  PARENT_SESSION=$(echo "$CMDLINE" | grep -A1 '^--parent-session-id$' | tail -1)
   HAS_CONTINUE=$(echo "$CMDLINE" | grep -c '^--continue$')
 
-  # Capture status bar for context %
-  CAPTURE=$(tmux capture-pane -t "$SESSION:0.$i" -p 2>/dev/null | tail -3)
+  # Capture status bar via maw capture
+  CAPTURE=$(maw capture "$SESSION" --pane "$i" --lines 3 2>/dev/null)
   CTX=$(echo "$CAPTURE" | grep -oP 'ctx \d+%' | head -1 | sed 's/ctx //')
   [ -z "$CTX" ] && CTX=$(echo "$CAPTURE" | grep -oP '\d+%' | tail -1)
   [ -z "$CTX" ] && CTX="?"
@@ -69,14 +70,12 @@ for i in $(seq 0 $((PANE_COUNT - 1))); do
 
   # Classify
   if [ -n "$AGENT_NAME" ]; then
-    # Team agent
     NAME="$AGENT_NAME"
     MODEL="${AGENT_MODEL:-sonnet}"
     COLOR="${AGENT_COLOR:-?}"
     TEAM="${AGENT_TEAM:-?}"
     TEAM_FOUND=$((TEAM_FOUND + 1))
   elif [ "$HAS_CONTINUE" -gt 0 ]; then
-    # Lead or standalone claude
     if [ "$i" -eq 0 ]; then
       NAME="team-lead"
       STATUS="← YOU"
@@ -103,12 +102,11 @@ if [ -n "$TEAM_NAME" ]; then
   OTHER=$((PANE_COUNT - 1 - TEAM_FOUND))
   echo "  Team: $TEAM_NAME | Agents: $TEAM_FOUND/$((PANE_COUNT-1)) panes | Non-team: $OTHER"
 
-  # Check team config
   TEAM_CONFIG="$HOME/.claude/teams/$TEAM_NAME/config.json"
   if [ ! -f "$TEAM_CONFIG" ] && [ "$TEAM_FOUND" -eq 0 ]; then
     echo "  ✅ Team '$TEAM_NAME' cleaned up — no agents remain"
   fi
 fi
 echo ""
-echo "  Detection: /proc cmdline (--agent-name, --team-name, --model, --agent-color)"
+echo "  Detection: /proc cmdline + maw capture/panes (v4)"
 echo ""
