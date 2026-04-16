@@ -124,6 +124,22 @@ GHQ_ROOT=$(ghq root)
 mkdir -p "$ROOT/ψ/incubate/$OWNER/$REPO"
 ln -sf "$GHQ_ROOT/github.com/$OWNER/$REPO" "$ROOT/ψ/incubate/$OWNER/$REPO/origin"
 
+# Auto-add gitignore pattern if missing (#250)
+GITIGNORE="$ROOT/.gitignore"
+if [ -f "$GITIGNORE" ]; then
+  if ! grep -q 'ψ/incubate/\*\*/origin' "$GITIGNORE" 2>/dev/null; then
+    echo 'ψ/incubate/**/origin' >> "$GITIGNORE"
+    echo "✓ Added ψ/incubate/**/origin to .gitignore"
+  fi
+else
+  # Also check ψ/.gitignore as fallback
+  PSI_GITIGNORE="$ROOT/ψ/.gitignore"
+  if [ -f "$PSI_GITIGNORE" ] && ! grep -q 'incubate/\*\*/origin' "$PSI_GITIGNORE" 2>/dev/null; then
+    echo 'incubate/**/origin' >> "$PSI_GITIGNORE"
+    echo "✓ Added incubate/**/origin to ψ/.gitignore"
+  fi
+fi
+
 # Update manifest
 echo "$OWNER/$REPO" >> "$ROOT/ψ/incubate/.origins"
 sort -u -o "$ROOT/ψ/incubate/.origins" "$ROOT/ψ/incubate/.origins"
@@ -478,15 +494,13 @@ Append new sessions. Never overwrite existing entries (Nothing is Deleted).
 
 ## .gitignore Pattern
 
-For Oracles that want to commit hub files but ignore symlinks:
+The pattern is auto-added to `.gitignore` on first `/incubate` run (#250). If you need to add it manually:
 
 ```gitignore
 # Ignore origin symlinks only (source lives in ghq)
 # Note: no trailing slash — origin is a symlink, not a directory
 ψ/incubate/**/origin
 ```
-
-After running `/incubate`, check your repo's `.gitignore` has this pattern.
 
 ---
 

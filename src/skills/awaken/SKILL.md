@@ -465,6 +465,7 @@ Fast mode skips /learn and /trace. Philosophy is given directly from mother-orac
    active/
    memory/logs/
    learn/**/origin
+   incubate/**/origin
    .awaken-state.json
    EOF
    ```

@@ -37,7 +37,7 @@ MEMORY_DIR="$HOME/.claude/projects/${ENCODED}/memory"
 /xray memory stats        # Show counts by type, total size, age
 /xray memory types        # Group memories by type
 /xray memory clean        # Find stale/outdated memories
-/xray memory forget <name># Remove a memory (after confirmation)
+/xray memory forget <name># Archive a memory (after confirmation)
 /xray skills              # List installed Oracle skills
 /xray sessions            # Show session history
 ```
@@ -177,26 +177,31 @@ Find potentially stale memories:
 
   ✓  All other memories look current
 
-  Run '/xray memory forget <name>' to remove a specific memory.
-  Nothing is deleted without your confirmation.
+  Run '/xray memory forget <name>' to archive a specific memory.
+  Nothing is deleted — archived for history.
 ```
 
-**NEVER auto-delete.** Only suggest. User decides.
+**NEVER auto-delete.** Only suggest. User decides. Stale memories are archived, not deleted.
 
 ---
 
-## Mode 6: Forget
+## Mode 6: Forget (Archive)
 
 ### `/xray memory forget <name>`
 
+> "Nothing is Deleted" — contradicted or stale memories are archived, not destroyed.
+
 1. Find the file
 2. Show its content
-3. Ask confirmation: "Remove this memory? (yes/no)"
+3. Ask confirmation: "Archive this memory? (yes/no)"
 4. If yes:
-   - Delete the file
+   - Create archive dir: `mkdir -p <MEMORY_DIR>/archive/`
+   - Move the file: `mv <MEMORY_DIR>/<file>.md <MEMORY_DIR>/archive/<file>.md`
    - Remove its entry from MEMORY.md
-   - Confirm: "Forgotten: <name>"
+   - Confirm: "Archived: <name> → archive/<file>.md"
 5. If no: "Kept: <name>"
+
+**IMPORTANT**: Never `rm` a memory file. Always `mv` to `archive/`.
 
 ---
 

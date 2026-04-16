@@ -119,6 +119,7 @@ You are the [ROLE] specialist on team "[TEAM_NAME]".
 
 REPO: [WORKTREE_PATH if --worktree, else ABSOLUTE_PATH_TO_MAIN_REPO]
 TASK: [TASK_DESCRIPTION]
+COLOR: [AGENT_COLOR — e.g. blue, green, yellow]
 WORKTREE: [yes — write freely | no — do NOT write files]
 
 Instructions:
@@ -145,7 +146,7 @@ Rules:
 - Be specific — paths, lines, evidence
 ```
 
-**Critical**: Always include literal `REPO:` path (never shell vars), `team-lead@[TEAM_NAME]`, heartbeat protocol, 500-word limit.
+**Critical**: Always include literal `REPO:` path (never shell vars), `COLOR:` from spawn opts, `team-lead@[TEAM_NAME]`, heartbeat protocol, 500-word limit.
 
 ### 4. Wait + Compile
 
@@ -203,6 +204,7 @@ Agents spawn in standby — human directs each one via lead relay.
 ```
 You are [ROLE] on team "[TEAM_NAME]" in MANUAL mode.
 REPO: [PATH]
+COLOR: [AGENT_COLOR — e.g. blue, green, yellow]
 Wait for instructions. On each message:
 1. Execute the work
 2. SendMessage report to team-lead@[TEAM_NAME]
