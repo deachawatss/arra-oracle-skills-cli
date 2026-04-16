@@ -12,9 +12,10 @@ All-in-one skill: `/soul-sync` + `/calibrate` + `/update` combined.
 ## Usage
 
 ```
-/oracle-soul-sync-update           # Check version and update
+/oracle-soul-sync-update           # Check + update to latest STABLE
+/oracle-soul-sync-update --alpha   # Check + update to latest alpha (dev track)
 /oracle-soul-sync-update --check   # Only check, don't update
-/oracle-soul-sync-update --cleanup # Uninstall first, then reinstall (removes old skills)
+/oracle-soul-sync-update --cleanup # Uninstall first, then reinstall
 ```
 
 ## Step 0: Timestamp + Check Current Version
@@ -28,12 +29,31 @@ date "+🕐 %H:%M %Z (%A %d %B %Y)" && CURRENT="v1.5.37" && echo "Current instal
 
 ---
 
-## Step 2: Check Latest Version
+## Step 2: Check Latest Version (stable vs alpha)
 
 ```bash
-# Get latest version from GitHub
-LATEST=$(curl -s https://api.github.com/repos/Soul-Brews-Studio/arra-oracle-skills-cli/tags | grep -m1 '"name"' | cut -d'"' -f4)
-echo "Latest available: $LATEST"
+# Get ALL tags via jq, separate stable from alpha
+TAGS=$(curl -s https://api.github.com/repos/Soul-Brews-Studio/arra-oracle-skills-cli/tags | jq -r '.[].name')
+LATEST_STABLE=$(echo "$TAGS" | grep -v 'alpha\|beta\|rc' | head -1)
+LATEST_ALPHA=$(echo "$TAGS" | grep 'alpha' | head -1)
+echo "Latest stable: $LATEST_STABLE"
+echo "Latest alpha:  $LATEST_ALPHA"
+```
+
+**Default = stable.** Only `--alpha` flag switches to alpha track. Newcomers always get stable.
+
+```bash
+# Default: stable track. --alpha opts into dev track.
+TRACK="stable"
+LATEST="$LATEST_STABLE"
+
+# Override with --alpha flag
+# (check ARGUMENTS for --alpha)
+if [ "$1" = "--alpha" ] || echo "$ARGUMENTS" | grep -q '\-\-alpha'; then
+  TRACK="alpha"
+  LATEST="$LATEST_ALPHA"
+fi
+echo "Track: $TRACK → comparing against $LATEST"
 ```
 
 ---
@@ -42,11 +62,13 @@ echo "Latest available: $LATEST"
 
 ```bash
 if [ "$CURRENT" = "$LATEST" ]; then
-  echo "✅ Soul synced! ($CURRENT)"
+  echo "✅ Soul synced! ($CURRENT) [$TRACK track]"
 else
-  echo "⚠️ Sync needed: $CURRENT → $LATEST"
+  echo "⚠️ Sync needed: $CURRENT → $LATEST [$TRACK track]"
 fi
 ```
+
+**Default = stable.** Use `--alpha` to check/update against dev releases.
 
 ---
 

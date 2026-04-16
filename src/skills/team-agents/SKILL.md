@@ -119,6 +119,7 @@ You are the [ROLE] specialist on team "[TEAM_NAME]".
 
 REPO: [WORKTREE_PATH if --worktree, else ABSOLUTE_PATH_TO_MAIN_REPO]
 TASK: [TASK_DESCRIPTION]
+COLOR: [AGENT_COLOR — e.g. blue, green, yellow]
 WORKTREE: [yes — write freely | no — do NOT write files]
 
 Instructions:
@@ -145,7 +146,7 @@ Rules:
 - Be specific — paths, lines, evidence
 ```
 
-**Critical**: Always include literal `REPO:` path (never shell vars), `team-lead@[TEAM_NAME]`, heartbeat protocol, 500-word limit.
+**Critical**: Always include literal `REPO:` path (never shell vars), `COLOR:` from spawn opts, `team-lead@[TEAM_NAME]`, heartbeat protocol, 500-word limit.
 
 ### 4. Wait + Compile
 
@@ -163,17 +164,56 @@ Compile into:
 ## Action Items
 ```
 
-### 5. Shutdown
+### 5. Shutdown Strategies
 
+**Strategy A: All-at-once** (default) — wait for all agents, then shutdown all:
 ```
-# 1. Send shutdown to EACH agent (structured messages CANNOT broadcast)
+# After ALL agents report DONE:
 SendMessage({ to: "agent-1", message: { type: "shutdown_request" } })
 SendMessage({ to: "agent-2", message: { type: "shutdown_request" } })
-
-# 2. Wait for shutdown_response (~10s)
-
-# 3. Clean up
+# Wait for shutdown_response (~10s)
 TeamDelete()
+```
+
+**Strategy B: Rolling shutdown** — shutdown each agent as it completes:
+```
+# On each DONE report: immediately shutdown that agent
+SendMessage({ to: "agent-1", message: { type: "shutdown_request" } })
+# Keep other agents running
+# When LAST agent reports → shutdown + TeamDelete
+```
+Use when: agents are independent, no cross-agent dependencies. Saves tokens — idle agents still consume context.
+
+**Strategy C: Cron check** — for long-running teams (10+ min):
+```
+# Schedule a periodic check via /loop or ScheduleWakeup
+Every 2-5 min: check TaskList
+  - If all tasks completed → shutdown all + compile
+  - If some done, some stuck → nudge stuck agents
+  - If all working → skip, check again next cycle
+```
+Use when: team runs > 10 min, lead doesn't want to block waiting.
+
+**Strategy D: TeammateIdle hook** (system-level):
+```json
+// ~/.claude/settings.json
+{ "hooks": { "TaskCompleted": [{
+  "matcher": "", "hooks": [{
+    "type": "command",
+    "command": "bash -c 'DONE=$(ls ~/.claude/tasks/*/completed 2>/dev/null | wc -l); TOTAL=$(ls ~/.claude/tasks/*/ 2>/dev/null | wc -l); [ \"$DONE\" = \"$TOTAL\" ] && echo ALL_DONE'"
+  }]
+}]}}
+```
+Exit code 0 + stdout "ALL_DONE" → lead knows to shutdown. Most reliable, no polling.
+
+**Pick based on team duration:**
+
+| Duration | Strategy | Why |
+|----------|----------|-----|
+| < 2 min | A (all-at-once) | Fast, simple |
+| 2-10 min | B (rolling) | Save tokens on early finishers |
+| > 10 min | C (cron) or D (hook) | Don't block lead |
+
 ```
 
 **Post-shutdown** (always run all 3):
@@ -203,6 +243,7 @@ Agents spawn in standby — human directs each one via lead relay.
 ```
 You are [ROLE] on team "[TEAM_NAME]" in MANUAL mode.
 REPO: [PATH]
+COLOR: [AGENT_COLOR — e.g. blue, green, yellow]
 Wait for instructions. On each message:
 1. Execute the work
 2. SendMessage report to team-lead@[TEAM_NAME]
