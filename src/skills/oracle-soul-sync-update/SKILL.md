@@ -28,12 +28,28 @@ date "+🕐 %H:%M %Z (%A %d %B %Y)" && CURRENT="v1.5.37" && echo "Current instal
 
 ---
 
-## Step 2: Check Latest Version
+## Step 2: Check Latest Version (stable vs alpha)
 
 ```bash
-# Get latest version from GitHub
-LATEST=$(curl -s https://api.github.com/repos/Soul-Brews-Studio/arra-oracle-skills-cli/tags | grep -m1 '"name"' | cut -d'"' -f4)
-echo "Latest available: $LATEST"
+# Get ALL tags via jq, separate stable from alpha
+TAGS=$(curl -s https://api.github.com/repos/Soul-Brews-Studio/arra-oracle-skills-cli/tags | jq -r '.[].name')
+LATEST_STABLE=$(echo "$TAGS" | grep -v 'alpha\|beta\|rc' | head -1)
+LATEST_ALPHA=$(echo "$TAGS" | grep 'alpha' | head -1)
+echo "Latest stable: $LATEST_STABLE"
+echo "Latest alpha:  $LATEST_ALPHA"
+```
+
+**Track detection**: if current version contains "alpha" → compare against LATEST_ALPHA. Otherwise → compare against LATEST_STABLE.
+
+```bash
+if echo "$CURRENT" | grep -q 'alpha'; then
+  LATEST="$LATEST_ALPHA"
+  TRACK="alpha"
+else
+  LATEST="$LATEST_STABLE"
+  TRACK="stable"
+fi
+echo "Track: $TRACK → comparing against $LATEST"
 ```
 
 ---
@@ -42,11 +58,13 @@ echo "Latest available: $LATEST"
 
 ```bash
 if [ "$CURRENT" = "$LATEST" ]; then
-  echo "✅ Soul synced! ($CURRENT)"
+  echo "✅ Soul synced! ($CURRENT) [$TRACK track]"
 else
-  echo "⚠️ Sync needed: $CURRENT → $LATEST"
+  echo "⚠️ Sync needed: $CURRENT → $LATEST [$TRACK track]"
 fi
 ```
+
+**Switch tracks**: `/oracle-soul-sync-update --stable` forces stable, `--alpha` forces alpha.
 
 ---
 
