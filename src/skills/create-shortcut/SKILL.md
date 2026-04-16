@@ -86,6 +86,14 @@ description: <description>
 
 <description>
 
+## Step 0: Init
+
+Chain date with the first real command — never call date alone (saves 1 tool call):
+
+\```bash
+date "+🕐 %H:%M %Z (%A %d %B %Y)" && <first-real-command-here>
+\```
+
 ## Instructions
 
 <Ask user what the skill should do, or generate from description>
