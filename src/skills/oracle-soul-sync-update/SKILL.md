@@ -12,9 +12,10 @@ All-in-one skill: `/soul-sync` + `/calibrate` + `/update` combined.
 ## Usage
 
 ```
-/oracle-soul-sync-update           # Check version and update
+/oracle-soul-sync-update           # Check + update to latest STABLE
+/oracle-soul-sync-update --alpha   # Check + update to latest alpha (dev track)
 /oracle-soul-sync-update --check   # Only check, don't update
-/oracle-soul-sync-update --cleanup # Uninstall first, then reinstall (removes old skills)
+/oracle-soul-sync-update --cleanup # Uninstall first, then reinstall
 ```
 
 ## Step 0: Timestamp + Check Current Version
@@ -39,15 +40,18 @@ echo "Latest stable: $LATEST_STABLE"
 echo "Latest alpha:  $LATEST_ALPHA"
 ```
 
-**Track detection**: if current version contains "alpha" → compare against LATEST_ALPHA. Otherwise → compare against LATEST_STABLE.
+**Default = stable.** Only `--alpha` flag switches to alpha track. Newcomers always get stable.
 
 ```bash
-if echo "$CURRENT" | grep -q 'alpha'; then
-  LATEST="$LATEST_ALPHA"
+# Default: stable track. --alpha opts into dev track.
+TRACK="stable"
+LATEST="$LATEST_STABLE"
+
+# Override with --alpha flag
+# (check ARGUMENTS for --alpha)
+if [ "$1" = "--alpha" ] || echo "$ARGUMENTS" | grep -q '\-\-alpha'; then
   TRACK="alpha"
-else
-  LATEST="$LATEST_STABLE"
-  TRACK="stable"
+  LATEST="$LATEST_ALPHA"
 fi
 echo "Track: $TRACK → comparing against $LATEST"
 ```
@@ -64,7 +68,7 @@ else
 fi
 ```
 
-**Switch tracks**: `/oracle-soul-sync-update --stable` forces stable, `--alpha` forces alpha.
+**Default = stable.** Use `--alpha` to check/update against dev releases.
 
 ---
 
