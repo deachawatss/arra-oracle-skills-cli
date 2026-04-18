@@ -1,7 +1,7 @@
 ---
 name: work-with
 description: 'Persistent cross-oracle collaboration with synchronic scoring and party system. Use when user says "work with", "sync with", "collaborate", "organize party", "invite", "recruit", or wants to establish/check persistent collaboration with another oracle.'
-argument-hint: "<oracle> [topic] [--sync | --checkpoint | --status | --broadcast | --fleet-status | --close] | organize | invite | who | tell | leave | --recruit | --team"
+argument-hint: "<oracle> [topic] [--sync | --checkpoint | --status | --broadcast | --fleet-status | --close | --defer | --state] | organize | invite | who | tell | leave | --recruit | --team | --pending | --deferred | --sweep-timeouts"
 ---
 
 # /work-with — Persistent Cross-Oracle Collaboration
@@ -39,6 +39,13 @@ Protocol field-tested across 2 nodes via /wormhole — sync-check discriminates 
 /work-with leave "topic"                          # Leave party (Nothing is Deleted)
 /work-with --recruit                              # Discover + introduce + invite
 /work-with --team "fleet-core"                    # Show team aggregate view
+
+# 4-Phase Commit (#238) — per-item DEFER/TIMEOUT on top of Accept/Revoke
+/work-with mawjs "topic" --defer "reason" --until 2026-04-20
+/work-with mawjs "topic" --state                  # Show CommitState table for this topic
+/work-with --pending                              # Fleet-wide: items awaiting my decision
+/work-with --deferred                             # Fleet-wide: items waiting on me to revisit
+/work-with --sweep-timeouts                       # Promote expired defers → timeouts
 ```
 
 ---
@@ -62,12 +69,21 @@ After compaction, don't blindly trust — run examination, score alignment.
 
 **Warning (from Mother Oracle)**: 100% sync is a yellow flag, not green. Convergence on facts is healthy. Convergence on interpretation at 100% = possible groupthink. Reward divergent interpretation resolved through dialogue.
 
-### 4. Accept-Revoke-Reaccept Lifecycle
+### 4. Accept-Revoke-Reaccept Lifecycle (4-phase, #238)
 
-Agreements are explicit commitments, not passive acknowledgments.
+Agreements are explicit commitments, not passive acknowledgments. Each item of each agreement carries a `CommitState` with one of five phases — the universal vocabulary shared with invites, ratifications, and recruitments:
+
 - **Accept**: "I commit to this state" (changes behavior — less verification needed)
-- **Revoke**: "I withdraw commitment" (with reason, Nothing is Deleted)
+- **Reject**: "I decline this state" (explicit no, with reason)
+- **Defer**: "Ask me again at `deferredUntil`" (not accepted, not rejected — time-boxed)
+- **Timeout**: "No response arrived within the window" (observed, not judged)
+- **Pending**: "No decision recorded yet"
+
+Plus two transitions that preserve history:
+- **Revoke**: "I withdraw commitment" (moves accept → pending, with reason, Nothing is Deleted)
 - **Re-accept**: "I commit to the updated state" (after renegotiation)
+
+TIMEOUT ≠ REJECT. A silent partner is not a `no`. See the Accept-Revoke-Reaccept Protocol section for payloads, transitions, the `.state.json` sidecar, and the sweeper.
 
 ### 5. Preserve Difference
 
@@ -117,11 +133,13 @@ If exists, parse all entries for this oracle and display:
 ```
 🤝 Collaborations with <oracle>
 
-  Topic              Anchor       Last Sync    Score    Status
-  ────────────────── ──────────── ──────────── ──────── ──────────
-  tmux design        maw-js#332   5 min ago    95%      SYNCED
-  bud lifecycle      maw-js#327   2h ago       71%      PARTIAL
-  kit ancestry       maw-js#330   1d ago       45%      DESYNC
+  Topic              Anchor       Last Sync    Raw      Decay    λ      Status
+  ────────────────── ──────────── ──────────── ──────── ──────── ────── ──────────
+  tmux design        maw-js#332   5 min ago    95%      95%      0.01   SYNCED
+  bud lifecycle      maw-js#327   2h ago       71%      69%      0.01   PARTIAL
+  kit ancestry       maw-js#330   1d ago       45%      35%      0.01   DESYNC
+
+  # Decay = syncScore × e^(-λ × hoursSinceLastSync). Computed on read (see Sync Decay section).
 
   Relationship:
     Since: 2026-04-13
@@ -305,24 +323,28 @@ When partner responds with SYNC-RESULT:
 ```
 🔄 Synchronic Score: <this-oracle> ↔ <partner>
 
-  Claim    Score   Decision   Evidence
-  ──────── ─────── ────────── ──────────────────────────
-  [A1]     1.0     ACCEPT     In partner's memory
-  [A2]     0.0     REJECT     Never discussed
-  [P1]     0.5     PARTIAL    Concept known, framing new
-  [T1]     1.0     ACCEPT     Confirmed teach-back
+  Claim    Raw     Decay   Decision   Evidence
+  ──────── ─────── ─────── ────────── ──────────────────────────
+  [A1]     1.0     1.0     ACCEPT     In partner's memory
+  [A2]     0.0     0.0     REJECT     Never discussed
+  [P1]     0.5     0.5     PARTIAL    Concept known, framing new
+  [T1]     1.0     1.0     ACCEPT     Confirmed teach-back
 
-  Overall: 63% — PARTIAL SYNC
-  
+  Raw overall: 63%     Decayed overall: 63%     λ: 0.01 (intra-soul)
+  Last sync: <now> — Status: PARTIAL SYNC
+
   ⚠️ Yellow flags:
     - [A2] not in partner's memory — remove or re-discuss?
-  
+
   ✓ Actions:
     - Updated local cache with partner's corrections
+    - Appended history: ψ/memory/collaborations/<partner>/sync.history.jsonl
     - Sync timestamp: <now>
 ```
 
-Update topic file with new score and timestamp.
+At the moment of sync, `decayed == raw` (hours elapsed = 0). Decay takes effect on subsequent reads — every `/work-with who`, `/work-with <oracle>`, `--team` aggregate recomputes via `compute_decay()`. See the Sync Decay section for helpers.
+
+Update topic file with new raw score and timestamp. Never store the decayed value.
 
 ---
 
@@ -870,16 +892,255 @@ Leader: Nat | Rules: sync≥0.7 · accept-required · diverge=high
 
 ### Sync Decay
 
+Confidence in a prior sync decays over time. The `syncScore` (aka `rawScore`) is what the partner confirmed at `lastSync`; `decayedScore` is what it's worth **now**, given the hours of silence that have elapsed since. Introduced by mawui-oracle in maw-js#332 c16; tracked as issue #239.
+
 ```
 decayedScore = rawScore × e^(-λ × hoursSinceLastSync)
 ```
 
 Lambda defaults by trust tier:
-- Intra-soul (same human): λ ≈ 0.01 (~70h half-life)
-- Cross-soul (different humans): λ ≈ 0.05 (~14h half-life)
-- New relationship: λ ≈ 0.1 (~7h half-life)
+
+| Trust tier        | λ     | Half-life | Rationale |
+|-------------------|-------|-----------|-----------|
+| Intra-soul        | 0.01  | ~69.3h    | Same human, shared context, drifts slow. |
+| Cross-soul        | 0.05  | ~13.9h    | Different humans, parallel evolution, drifts faster. |
+| New relationship  | 0.10  | ~6.9h     | Uncalibrated trust; stale sync = unknown quickly. |
 
 Decay is physics, not policy. Hidden oracles still decay. The clock doesn't care.
+
+**Storage discipline:** `syncScore` (raw) is stored at `lastSync`. `decayedScore` is **computed on every read** — never stored. Storing a decayed value invites staleness because the clock keeps ticking after the write. The ratified `PartyMember` schema retains the `decayedScore` field for schema compatibility (Nothing is Deleted), but every writer treats it as a derived value refreshed at read-time from (`syncScore`, `lastSync`, `λ`).
+
+**Party override:** If `PartyRules.decay_lambda` is explicitly set on the party, that λ wins — party rules override tier defaults.
+
+**Threshold behavior (from mawui-oracle, maw-js#332 c16):** Decay never auto-removes a partner. When `decayedScore < 0.5`, the skill surfaces a re-sync suggestion. When `decayedScore < kick_threshold` (default 0.3), the partner is flagged as stale, but kicking is a human decision. Physics observes; humans decide.
+
+### Decay Helpers (bash + python3)
+
+These helpers are called by every reader that renders a sync score.
+
+```bash
+# Resolve λ for a partner based on soul relationship + session history.
+# Priority: party rule override > trust tier > pessimistic default.
+decay_lambda_for() {
+  local PARTNER="$1"
+  local PARTY_FILE="$2"  # optional — pass "" to skip party rule check
+
+  # 1. Party rule override wins
+  if [ -n "$PARTY_FILE" ] && [ -f "$PARTY_FILE" ]; then
+    local PARTY_LAMBDA=$(jq -r '.rules.decay_lambda // empty' "$PARTY_FILE" 2>/dev/null)
+    if [ -n "$PARTY_LAMBDA" ] && [ "$PARTY_LAMBDA" != "null" ]; then
+      echo "$PARTY_LAMBDA"
+      return
+    fi
+  fi
+
+  # 2. Session count — new relationships decay fastest
+  local SESSIONS=0
+  local CTX_FILE="$COLLAB_DIR/$PARTNER/context.md"
+  if [ -f "$CTX_FILE" ]; then
+    SESSIONS=$(grep -c -i 'session' "$CTX_FILE" 2>/dev/null || echo 0)
+  fi
+  if [ "$SESSIONS" -lt 5 ]; then
+    echo "0.10"   # new relationship — 6.9h half-life
+    return
+  fi
+
+  # 3. Intra-soul vs cross-soul via contacts.json
+  local MY_SOUL=$(grep -E '^\| Soul' "$ORACLE_ROOT/CLAUDE.md" 2>/dev/null | awk -F'|' '{print $3}' | xargs)
+  local THEIR_SOUL=$(python3 -c "
+import json
+try:
+    d = json.load(open('$PSI/contacts.json'))
+    print(d.get('contacts', {}).get('$PARTNER', {}).get('soul', 'unknown'))
+except Exception:
+    print('unknown')
+" 2>/dev/null)
+
+  if [ -n "$MY_SOUL" ] && [ "$MY_SOUL" = "$THEIR_SOUL" ]; then
+    echo "0.01"   # intra-soul — 69.3h half-life
+  else
+    # Pessimistic default: unknown soul → cross-soul (safer)
+    echo "0.05"   # cross-soul — 13.9h half-life
+  fi
+}
+
+# Pure decay computation — never stored, always computed on read.
+compute_decay() {
+  local RAW="$1"                # 0.0–1.0
+  local LAST_SYNC_ISO="$2"      # ISO8601
+  local LAMBDA="$3"
+
+  if [ -z "$LAST_SYNC_ISO" ] || [ "$LAST_SYNC_ISO" = "null" ]; then
+    # Never synced — raw IS the decayed value (no time has passed)
+    echo "$RAW"
+    return
+  fi
+
+  local NOW_EPOCH=$(date -u +%s)
+  local LAST_EPOCH=$(date -u -d "$LAST_SYNC_ISO" +%s 2>/dev/null || echo "$NOW_EPOCH")
+  local HOURS=$(echo "scale=4; ($NOW_EPOCH - $LAST_EPOCH) / 3600" | bc)
+
+  python3 -c "import math; print(round($RAW * math.exp(-$LAMBDA * $HOURS), 3))"
+}
+
+# Hours since last sync — used for "12h ago" display and stale-edge detection.
+hours_since() {
+  local LAST_SYNC_ISO="$1"
+  if [ -z "$LAST_SYNC_ISO" ] || [ "$LAST_SYNC_ISO" = "null" ]; then
+    echo "0"
+    return
+  fi
+  local NOW_EPOCH=$(date -u +%s)
+  local LAST_EPOCH=$(date -u -d "$LAST_SYNC_ISO" +%s 2>/dev/null || echo "$NOW_EPOCH")
+  echo "scale=2; ($NOW_EPOCH - $LAST_EPOCH) / 3600" | bc
+}
+```
+
+TypeScript reference (mirrors the bash helpers — for schema-doc readers):
+
+```typescript
+function decay(raw: number, lastSyncISO: string, lambda: number): number {
+  if (!lastSyncISO) return raw;
+  const hours = (Date.now() - Date.parse(lastSyncISO)) / 3_600_000;
+  return raw * Math.exp(-lambda * hours);
+}
+
+function decayLambdaFor(
+  sessions: number,
+  mySoul: string,
+  theirSoul: string,
+  partyRuleLambda?: number,
+): number {
+  if (partyRuleLambda != null) return partyRuleLambda;    // party override
+  if (sessions < 5) return 0.10;                           // new relationship
+  if (mySoul && mySoul === theirSoul) return 0.01;         // intra-soul
+  return 0.05;                                             // cross-soul (pessimistic default)
+}
+```
+
+### Wiring: Where Readers Apply Decay
+
+Every surface that renders `syncScore` MUST also render `decayedScore` computed on the fly. Never read a stored decayed value.
+
+| Reader surface                       | Change                                                                 |
+|--------------------------------------|------------------------------------------------------------------------|
+| `/work-with <oracle>` relationship   | Add `Decay` column next to `Score`.                                    |
+| `/work-with <oracle> --sync` result  | Show both: `raw 95% → decayed 88% (λ=0.01, 12h)`.                      |
+| `/work-with who` party table         | Use `Decay` column actively (the example table above is now live, not static). |
+| `/work-with --team` aggregate        | Aggregate sync over **decayed** scores, not raw.                       |
+
+Example render block inside a reader:
+
+```bash
+RAW=$(jq -r '.syncScore // 0' "$MEMBER_JSON")
+LAST=$(jq -r '.lastSync // empty' "$MEMBER_JSON")
+LAMBDA=$(decay_lambda_for "$ORACLE_NAME" "$PARTY_FILE")
+DECAYED=$(compute_decay "$RAW" "$LAST" "$LAMBDA")
+AGE_H=$(hours_since "$LAST")
+printf "%s  raw=%s  decayed=%s  λ=%s  age=%sh\n" "$ORACLE_NAME" "$RAW" "$DECAYED" "$LAMBDA" "$AGE_H"
+```
+
+Example `/work-with who` output with live decay (replaces the static table rendered earlier in this section):
+
+```
+🤝 party-system-design (maw-js#332)
+Leader: Nat | Rules: sync≥0.7 · accept-required · diverge=high · λ=0.01
+
+  Oracle          Node          Status    Raw    Decay  λ      Age   Trust    Last
+  ─────────────── ───────────── ───────── ────── ────── ────── ───── ──────── ──────
+  ● skills-cli    oracle-world  active    93%    93%    0.01    0h   high     now
+  ● mawjs         oracle-world  active    88%    88%    0.01    8m   high     8m
+  ◌ mawui         oracle-world  compacted 95%    94%    0.01    1h   high     1h
+  ○ white-worm    white         away      88%    73%    0.05    4h   medium   3h   ▁▃▅▇▅▃▁
+  · mother        white         dormant   71%    41%    0.05   12h   initial  12h  ▇▅▃▁⎯⎯⎯ ⚠
+
+  ⏱  kit-ancestry (↔ boonkeeper): decayed 0.38 — below 0.5. /work-with --sync suggested.
+```
+
+Example `--sync` result block with raw+decayed columns:
+
+```
+🔄 Synchronic Score: skills-cli ↔ mawjs
+
+  Claim    Raw    Decay  Decision   Evidence
+  ──────── ────── ────── ────────── ──────────────────────────
+  [A1]     1.0    0.95   ACCEPT     In partner's memory (12h old)
+  [A2]     0.0    0.0    REJECT     Never discussed
+  [P1]     0.5    0.47   PARTIAL    Concept known, framing new
+
+  Raw overall: 63%     Decayed overall: 59%
+  λ: 0.01 (intra-soul — same human Nat, 5+ sessions)
+  Last sync: 2026-04-16 22:05 UTC (12h ago)
+```
+
+### Sync History (for mawui mesh UI)
+
+Every successful `--sync` appends one line to a per-partner JSONL file so the mesh UI (maw-ui federation_2d, fed by `/fleet`) can render fading edges and sparklines.
+
+File: `$COLLAB_DIR/<oracle>/sync.history.jsonl`
+
+Schema: `schema/sync-history.schema.json` (ships with this skill).
+
+```jsonl
+{"ts":"2026-04-15T10:22:00Z","partner":"mawjs","topic":"tmux-design","raw":0.95,"lambda":0.01}
+{"ts":"2026-04-16T14:05:00Z","partner":"mawjs","topic":"tmux-design","raw":0.88,"lambda":0.01}
+{"ts":"2026-04-17T09:00:00Z","partner":"mawjs","topic":"tmux-design","raw":0.93,"lambda":0.01}
+```
+
+Append step (runs at the end of every `--sync`):
+
+```bash
+HIST_FILE="$COLLAB_DIR/$ORACLE_NAME/sync.history.jsonl"
+mkdir -p "$(dirname "$HIST_FILE")"
+TS=$(date -u +%Y-%m-%dT%H:%M:%SZ)
+printf '{"ts":"%s","partner":"%s","topic":"%s","raw":%s,"lambda":%s}\n' \
+  "$TS" "$ORACLE_NAME" "$TOPIC" "$RAW_SCORE" "$LAMBDA" >> "$HIST_FILE"
+```
+
+Nothing is Deleted: history is append-only. Readers truncate on display (last 7 for sparkline), never on disk.
+
+### UI Rendering Rules (implemented by mawui)
+
+The CLI only renders text. The mesh UI renders edges between oracles. Consumer contract for `sync.history.jsonl`:
+
+- **Edge opacity** = `decayedScore` (0.0–1.0 maps to 10%–100% alpha)
+- **Edge color** = green ≥0.9, amber 0.7–0.9, cyan 0.5–0.7, gray <0.5 (applied to decayed, not raw)
+- **Sparkline** = last 7 `decayedScore` samples (each computed on read from `raw`+`ts`+`lambda`), rendered on hover
+- **Stale indicator** = if `hoursSinceLastSync > 3 × halfLife` (i.e. decayed < ~0.125), show dashed edge
+- **No auto-kick** = a decayed edge is a signal, never an eviction. Kicking is a human decision.
+
+### Aggregation: `--team` Uses Decayed, Not Raw
+
+When `/work-with --team "name"` computes an aggregate sync score, it aggregates over the **decayed** score of each party member, not the raw one:
+
+```bash
+# Per party: mean of member decayed scores
+# Per team: simple mean across all (party × member) pairs
+python3 -c "
+import json, glob, math, time
+from datetime import datetime
+def parse_iso(s):
+    try:
+        return datetime.fromisoformat(s.replace('Z','+00:00')).timestamp()
+    except Exception:
+        return time.time()
+now = time.time()
+total, n = 0.0, 0
+for f in glob.glob('$COLLAB_DIR/parties/*.json'):
+    party = json.load(open(f))
+    if party.get('team') != '$TEAM_TAG': continue
+    lam = party.get('rules', {}).get('decay_lambda', 0.05)
+    for m in party.get('members', []):
+        raw = m.get('syncScore', 0)
+        last = m.get('lastSync', '')
+        hours = (now - parse_iso(last)) / 3600 if last else 0
+        dec = raw * math.exp(-lam * hours)
+        total += dec; n += 1
+print(f'{(total/n*100 if n else 0):.0f}%')
+"
+```
+
+The team banner now shows `decayed aggregate 84%` instead of a silently-raw `84%`.
 
 ---
 
@@ -1053,8 +1314,10 @@ Team = tag on parties. Lightweight — no separate CRUD.
   kit-ancestry             2/3      —      closed
 
   Team members: skills-cli, mawjs, mawui (union across parties)
-  Team aggregate sync: 84%
+  Team aggregate sync: 84% (decayed — computed from raw × e^(-λh) per member)
 ```
+
+The Sync column shows each party's mean **decayed** score, not raw. See the Sync Decay § for the aggregation formula and helper bash block.
 
 ### Team members = union of party members
 
@@ -1140,8 +1403,8 @@ interface PartyMember {
   node: string;
   status: "active" | "idle" | "compacted" | "away" | "dormant" | "hidden" | "busy";
   role: "initiator" | "member";    // never "leader" — leader is human
-  syncScore: number;               // party-scoped (THIS topic only)
-  decayedScore: number;            // party-scoped + decay formula
+  syncScore: number;               // RAW score at lastSync (what partner confirmed, THIS topic only)
+  decayedScore: number;            // DERIVED — computed on read via decay(raw, lastSync, λ). Never stored. See #239.
   overallTrust?: number;           // optional rolled-up across all parties
   lastSync: string;
   trust: "high" | "medium" | "initial" | "uncalibrated";
@@ -1166,6 +1429,28 @@ interface PendingInvite {
   status: "pending" | "deferred" | "accepted" | "declined" | "expired";
   deferredUntil?: string;
   expiresAt?: string;
+}
+
+// Universal commit state — applies to agreements, invites, ratifications.
+// Back-ported from PendingInvite so every commit decision shares one vocabulary.
+// See: issue #238, phase3-design.md.
+type CommitPhase = "accept" | "reject" | "defer" | "timeout" | "pending";
+
+interface CommitState {
+  phase: CommitPhase;
+  decidedAt?: string;          // ISO8601 — when ACCEPT/REJECT/DEFER recorded
+  decidedBy?: string;          // oracle id that transitioned
+  reason?: string;             // required for REJECT, optional for DEFER
+  deferredUntil?: string;      // required when phase="defer" (ISO8601)
+  timeoutAt?: string;          // when phase="timeout" was observed
+  previousPhase?: CommitPhase; // for audit trail (defer→accept etc.)
+}
+
+// Sidecar file per topic — machine-queryable agreement state.
+// Path: <oracle>/topics/<slug>.state.json
+interface TopicStateSidecar {
+  topic: string;
+  items: Record<string, CommitState & { text: string }>;
 }
 ```
 
@@ -1218,6 +1503,56 @@ OVERALL: XX% | DECISION: ACCEPT / PARTIAL-ACCEPT / REJECT
 
 ## Accept-Revoke-Reaccept Protocol
 
+### Commit Phases (4-phase, from #238)
+
+The binary Accept/Revoke cycle was partial — it had no way to say "not now, but not no" at the agreement level. The 4-phase commit (mawjs c14, back-ported from `PendingInvite`) adds two more phases so every commit decision — agreement, invite, ratification, recruitment — uses one vocabulary.
+
+| Phase   | Meaning | Semantics |
+|---------|---------|-----------|
+| ACCEPT  | "I commit to this state" | Behavior changes; carries forward across sessions. |
+| REJECT  | "I decline this state" | Explicit no, with reason. Preserved (Nothing is Deleted). |
+| DEFER   | "Ask me again at `deferredUntil`" | Not accepted, not rejected. Time-boxed. |
+| TIMEOUT | "No response arrived within the window" | **Not a judgment** — an observation. |
+| PENDING | "No decision recorded yet" | Initial state for every new item. |
+
+**Critical rule**: TIMEOUT ≠ REJECT. A silent partner is not a `no`. TIMEOUT is written by the observer locally; it is never transmitted as a "you timed out" message to the silent partner. That would be judgment.
+
+See the `CommitState` type above for the machine-readable shape. Every item of every agreement carries one.
+
+### State sidecar (per topic)
+
+Topic markdown stays free-form (human-edited prose). Machine state lives alongside in a sidecar JSON so transitions are queryable without re-parsing the prose.
+
+**Path**: `<oracle>/topics/<slug>.state.json`
+
+```json
+{
+  "topic": "tmux-design",
+  "items": {
+    "A1": {
+      "text": "Heartbeat keys are PROGRESS/STUCK/DONE/ABORT",
+      "phase": "accept",
+      "decidedAt": "2026-04-15T10:22:00Z",
+      "decidedBy": "mawjs"
+    },
+    "A2": {
+      "text": "Pane titles include team tag",
+      "phase": "defer",
+      "decidedAt": "2026-04-15T11:00:00Z",
+      "decidedBy": "skills-cli-oracle",
+      "deferredUntil": "2026-04-20T00:00:00Z",
+      "reason": "After mawjs ships #222"
+    },
+    "A3": {
+      "text": "Worktree isolation on by default",
+      "phase": "pending"
+    }
+  }
+}
+```
+
+Why sidecar and not inline YAML? Topic files are human-edited markdown; state transitions are machine-driven. Separation keeps each file honest about its audience.
+
 ### Accept
 
 ```
@@ -1228,6 +1563,48 @@ COMMITMENT: I accept this state. Behavior change: <what changes>
 
 After accept: commitment carries forward to next session without re-proving.
 
+### Reject
+
+```
+REJECT | from: <oracle> | timestamp: <ISO8601>
+ITEM: <agreement text or claim id>
+REASON: <explicit no, required>
+```
+
+Rejection is explicit. Nothing is Deleted — the reason is recorded, and the item can re-enter `pending` later for renegotiation.
+
+### Defer
+
+```
+DEFER | from: <oracle> | timestamp: <ISO8601>
+ITEM: <agreement text or claim id>
+UNTIL: <ISO8601>          # optional, default = +24h
+REASON: <why>             # optional, helps partner understand
+```
+
+Defer says "not now, but not no". The writer sets `phase="defer"` and `deferredUntil` on the sidecar. When `deferredUntil` elapses, the sweeper promotes the phase to `timeout` (observation, not judgment) or back to `pending` if a re-prompt is configured.
+
+### Timeout (observed, not sent)
+
+```
+TIMEOUT | observed-by: <oracle> | timestamp: <ISO8601>
+ITEM: <agreement text or claim id>
+WINDOW: <ISO8601 start>..<ISO8601 end>
+NOTE: No response received — state is "unknown", not "no".
+```
+
+TIMEOUT is **observed, not sent**. The skill writes it locally; it does not transmit a "you timed out" message to the silent partner.
+
+**Default windows** (proposed, per phase3-design open-question #2):
+
+| Transport            | Window   |
+|----------------------|----------|
+| maw hey (same node)  | 24h      |
+| /wormhole (cross)    | 7d       |
+| GitHub (async)       | 30d      |
+
+These back the existing per-invite timeouts in the Timeouts table above and extend them to agreement-level decisions.
+
 ### Revoke
 
 ```
@@ -1236,7 +1613,7 @@ ITEM: <agreement text>
 REASON: <why revoking>
 ```
 
-Revocation is as explicit as acceptance. Nothing is Deleted — the revocation and its reason are recorded.
+Revocation is as explicit as acceptance. Nothing is Deleted — the revocation and its reason are recorded. A revoke moves the sidecar phase from `accept` back to `pending` (re-negotiation surface).
 
 ### Re-accept
 
@@ -1245,6 +1622,69 @@ RE-ACCEPT | from: <oracle> | timestamp: <ISO8601>
 ITEM: <updated agreement text>
 PREVIOUS: <original text>
 CHANGES: <what changed>
+```
+
+### Allowed state transitions
+
+Enforce these in any writer. Illegal transitions log a warning and no-op.
+
+```
+pending  → accept | reject | defer | timeout
+defer    → accept | reject | timeout      (on deferredUntil elapse, auto → timeout or pending)
+timeout  → accept | reject | defer         (partner reappears)
+accept   → (revoke → pending) | (re-accept stays accept)
+reject   → pending                         (re-negotiation)
+```
+
+Every transition writes `previousPhase` into the sidecar so the audit trail is preserved.
+
+### Query surface (additive to Usage block)
+
+```
+/work-with <oracle> "topic" --defer "reason" --until 2026-04-20
+/work-with <oracle> "topic" --state                 # Show CommitState table for all items
+/work-with --pending                                # Fleet-wide: what needs my decision?
+/work-with --deferred                               # Fleet-wide: what's waiting on me to revisit?
+/work-with --sweep-timeouts                         # Promote expired `defer` → `timeout`
+```
+
+Example display for `--state`:
+
+```
+🗂  tmux-design (↔ mawjs)
+
+  ID   Phase     Decided            Text
+  ──── ────────  ─────────────────  ──────────────────────────────────────
+  A1   ✓ accept  2026-04-15 10:22   Heartbeat keys are PROGRESS/STUCK/...
+  A2   ⏸ defer   2026-04-15 11:00   Pane titles include team tag
+       until: 2026-04-20 (3d)  reason: After mawjs ships #222
+  A3   · pending  —                 Worktree isolation on by default
+  A4   ⏱ timeout 2026-04-14 18:30   Color semantics (partner silent 48h)
+       note: Unknown state, not rejection. /work-with mawjs "tmux-design" --sync to revisit.
+```
+
+### Sweeper — `--sweep-timeouts`
+
+Idempotent, cron-friendly. Runs at `/forward` (session boundary) and `/recap` (session start). No separate daemon.
+
+```bash
+# Pseudocode — promote expired defers to timeouts
+for state_file in "$COLLAB_DIR"/*/topics/*.state.json; do
+  jq -c '.items | to_entries[]' "$state_file" | while read -r entry; do
+    ID=$(echo "$entry" | jq -r '.key')
+    PHASE=$(echo "$entry" | jq -r '.value.phase')
+    UNTIL=$(echo "$entry" | jq -r '.value.deferredUntil // empty')
+    NOW=$(date -u +%Y-%m-%dT%H:%M:%SZ)
+    if [ "$PHASE" = "defer" ] && [ -n "$UNTIL" ] && [[ "$UNTIL" < "$NOW" ]]; then
+      # Promote to timeout — observation, not judgment
+      jq --arg id "$ID" --arg now "$NOW" '
+        .items[$id].previousPhase = .items[$id].phase |
+        .items[$id].phase = "timeout" |
+        .items[$id].timeoutAt = $now
+      ' "$state_file" > "$state_file.tmp" && mv "$state_file.tmp" "$state_file"
+    fi
+  done
+done
 ```
 
 ### Silent Revoke Detection (from Mother Oracle)
@@ -1364,6 +1804,7 @@ Trust that's never re-tested becomes superstition. Sync-checks ARE the re-audit.
 7. **Accept is commitment** — changes behavior, carries forward, auditable
 8. **Rule 6** — all sync-checks and broadcasts are signed
 9. **Broadcast is opt-in** — pair collabs manual, teams auto (consent-at-registration), cross-node prompts (see ## Broadcast, issue #233)
+10. **TIMEOUT ≠ REJECT** — silence is an observation, not a judgment (4-phase commit, #238)
 
 ---
 
@@ -1378,13 +1819,20 @@ Trust that's never re-tested becomes superstition. Sync-checks ARE the re-audit.
 │   └── tmux-triage.json                 # Party: members, rules, invites
 ├── <oracle>/                            # Per-oracle relationship
 │   ├── context.md                       # Relationship memory (who, style, trust)
+│   ├── sync.history.jsonl               # Append-only raw sync scores + λ (#239)
 │   └── topics/                          # Per-topic state
-│       ├── tmux-design.md               # Topic: agreements, pending, checkpoints
+│       ├── tmux-design.md               # Topic: agreements, pending, checkpoints (human prose)
+│       ├── tmux-design.state.json       # 4-phase CommitState sidecar (#238) — machine state
 │       └── bud-lifecycle.md             # Topic: agreements, pending, checkpoints
 └── <oracle>/
     ├── context.md
+    ├── sync.history.jsonl
     └── topics/
 ```
+
+Schemas shipped with this skill:
+
+- `schema/sync-history.schema.json` — contract for `sync.history.jsonl`. Consumed by mawui federation_2d and `/fleet` for fading-edge / sparkline rendering. See the Sync Decay section.
 
 ---
 
